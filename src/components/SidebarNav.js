@@ -1,7 +1,9 @@
 import React from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import { Link } from 'react-router-dom';
+import Scrollbar from 'react-scrollbars-custom';
 
-class SidebarNav extends React.Component {
+export default class SidebarNav extends React.Component {
     constructor(props) {
         super(props);
         this.navMenu = React.createRef();
@@ -44,12 +46,12 @@ class SidebarNav extends React.Component {
                     { /* Logo */ }
                     <div className="">
                         <FontAwesomeIcon className="mr-4 text-2xl text-indigo-500" icon="project-diagram" />
-                        <a className="text-xl text-gray-100 font-semibold" href="#">Project Tracker</a>
+                        <Link to="/" className="text-xl text-gray-100 font-semibold">Project Tracker</Link>
                     </div>
 
                     { /* Hamburger for sidebar items */ }
                     <div className="block">
-                        <button onClick={this.toggleNavMenu} className="flex items-center py-2 px-3 text-indigo-500 rounded border border-indigo-500">
+                        <button onClick={this.toggleNavMenu} className="flex items-center py-2 px-3 text-indigo-500 rounded border border-indigo-500 hover:bg-indigo-300">
                             <FontAwesomeIcon icon="bars" />
                         </button>
                     </div>
@@ -58,38 +60,43 @@ class SidebarNav extends React.Component {
                 { /* Nav Items */ }
                 <div className="hidden lg:hidden relative" ref={this.navMenu}>
                     <div className="absolute w-full px-4 pb-4 bg-gray-800">
-                        <a className="block mb-1 px-4 py-2 rounded-md hover:bg-gray-900 focus:bg-gray-900 text-gray-100" href="#">
-                            <FontAwesomeIcon className="mr-4 text-lg text-gray-600" icon="folder" />
-                            First Project
-                        </a>
-                        <a className="block px-4 py-2 rounded-md hover:bg-gray-900 focus:bg-gray-900 text-gray-100" href="#">
-                            <FontAwesomeIcon className="mr-4 text-lg text-gray-600" icon="folder" />
-                            Second Project
-                        </a>
+                        {
+                            this.props.projects.map((element, i) => {
+                                return (
+                                    <Link key={i} onClick={this.toggleNavMenu} to={"/project/" + element.id} className="block mb-1 px-4 py-2 rounded-md hover:bg-gray-900 focus:bg-gray-900 text-gray-100">
+                                        <FontAwesomeIcon className="mr-4 text-lg text-gray-600" icon="folder" />
+                                        {element.title}
+                                    </Link>
+                                );
+                            })
+                        }
                     </div>
                 </div>
 
                 { /* Sidebar */ }
                 <div className="hidden lg:flex">
-                    <div className="flex-grow h-screen bg-gray-800">
+                    <div className="flex-grow h-screen bg-gray-800 relative">
                         { /* Logo */ }
-                        <div className="p-4">
+                        <div className="p-4 h-16">
                             <FontAwesomeIcon className="mr-4 text-2xl text-indigo-500" icon="project-diagram" />
-                            <a className="text-xl text-gray-100 font-semibold" href="#">Project Tracker</a>
+                            <Link to="/" className="text-xl text-gray-100 font-semibold">Project Tracker</Link>
                         </div>
 
                         { /* Sidebar Items */ }
-                        <div className="p-2">
+                        <div className="p-2 fixed top-16 bottom-0 my-auto lg:w-3/12 xl:w-1/5">
                             { /* TODO: Place the dashboard item here */ }
-
-                            <a className="block mb-1 px-4 py-2 rounded-md hover:bg-gray-900 focus:bg-gray-900 text-gray-100" href="#">
-                                <FontAwesomeIcon className="mr-4 text-lg text-gray-600" icon="folder" />
-                                First Project
-                            </a>
-                            <a className="block px-4 py-2 rounded-md hover:bg-gray-900 focus:bg-gray-900 text-gray-100" href="#">
-                                <FontAwesomeIcon className="mr-4 text-lg text-gray-600" icon="folder" />
-                                Second Project
-                            </a>
+                            <Scrollbar noScrollX>
+                                {
+                                    this.props.projects.map((element, i) => {
+                                        return (
+                                            <Link key={i} to={"/project/" + element.id} className="block mb-1 px-4 py-2 rounded-md hover:bg-gray-900 focus:bg-gray-900 text-gray-100">
+                                                <FontAwesomeIcon className="mr-4 text-lg text-gray-600" icon="folder" />
+                                                {element.title}
+                                            </Link>
+                                        );
+                                    })
+                                }
+                            </Scrollbar>
                         </div>
                     </div>
                 </div>
@@ -97,5 +104,3 @@ class SidebarNav extends React.Component {
         );
     }
 }
-
-export default SidebarNav;

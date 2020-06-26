@@ -2,6 +2,7 @@ import React from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { Link } from 'react-router-dom';
 import Scrollbar from 'react-scrollbars-custom';
+import DBService from '../services/DBService.js';
 
 export default class SidebarNav extends React.Component {
     constructor(props) {

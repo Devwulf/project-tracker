@@ -1,6 +1,6 @@
 {
   "name": "project-tracker",
-  "version": "0.2.0",
+  "version": "0.2.5",
   "private": true,
   "dependencies": {
     "@fortawesome/fontawesome-svg-core": "^1.2.29",
@@ -16,7 +16,8 @@
     "react-dom": "^16.13.1",
     "react-router-dom": "^5.2.0",
     "react-scripts": "3.4.1",
-    "react-scrollbars-custom": "^4.0.25"
+    "react-scrollbars-custom": "^4.0.25",
+    "typescript": "^3.9.5"
   },
   "scripts": {
     "start": "npm run watch:css && react-scripts start",

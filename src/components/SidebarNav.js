@@ -2,7 +2,6 @@ import React from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { Link } from 'react-router-dom';
 import Scrollbar from 'react-scrollbars-custom';
-import DBService from '../services/DBService.js';
 
 export default class SidebarNav extends React.Component {
     constructor(props) {
@@ -59,7 +58,7 @@ export default class SidebarNav extends React.Component {
                 </div>
 
                 { /* Nav Items */ }
-                <div className="hidden lg:hidden relative" ref={this.navMenu}>
+                <div className="hidden lg:hidden relative z-20" ref={this.navMenu}>
                     <div className="absolute w-full px-4 pb-4 bg-gray-800">
                         {
                             this.props.projects.map((element, i) => {

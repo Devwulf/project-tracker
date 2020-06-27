@@ -1,14 +1,12 @@
 import React from 'react';
-import './App.css';
+import './assets/App.css';
 
 import { library } from '@fortawesome/fontawesome-svg-core';
 import { fas } from '@fortawesome/free-solid-svg-icons';
-import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { useRouteMatch, useParams, Switch, Route } from 'react-router-dom';
+import { useParams, Switch, Route } from 'react-router-dom';
 
 import SidebarNav from './components/SidebarNav.js';
 import DBService from './services/DBService.js';
-import NewProjectForm from './components/NewProjectForm';
 import Project from './components/Project';
 
 library.add(fas);
@@ -45,7 +43,7 @@ export default class App extends React.Component {
     return (
       <div className="flex flex-col lg:flex-row h-screen">
         <SidebarNav projects={this.state.projects} />
-        <article className="flex-grow h-full bg-gray-200">
+        <article className="flex-grow h-full bg-gray-300">
           <Switch>
             <Route path="/project/:projectId">
               <ParamsProvider>

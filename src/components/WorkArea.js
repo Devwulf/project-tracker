@@ -1,15 +1,15 @@
-import React from 'react';
+import React, { Children } from 'react';
 import { raise } from '@vx/drag';
 import { Zoom } from '@vx/zoom';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import '../assets/App.css';
 
-import ScaledDrag from './ScaledDrag.tsx';
 import DBService from '../services/DBService';
-import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import Node from './Node';
 
 const initialTransformZoom = {
-    scaleX: 1/2,
-    scaleY: 1/2,
+    scaleX: 3/4,
+    scaleY: 3/4,
     translateX: 100,
     translateY: 100,
     skewX: 0,
@@ -24,12 +24,38 @@ export default class WorkArea extends React.Component {
             projectId: 0,
             draggableItems: [],
             isDirtyDB: false,
-            nodeCtrlHidden: true
+            isDirtyDOM: false,
+            nodeCtrlHidden: true,
+            selectedNodeId: 0,
+            listeners: {},
+            edges: {}
         };
 
         this.handleDragStart = this.handleDragStart.bind(this);
-        this.handleMoveEnd = this.handleMoveEnd.bind(this);
+        this.handleDragMove = this.handleDragMove.bind(this);
+        this.handleDragEnd = this.handleDragEnd.bind(this);
         this.toggleNodeCtrl = this.toggleNodeCtrl.bind(this);
+        this.toggleNodeOptions = this.toggleNodeOptions.bind(this);
+        this.handleEdgeCtrlDragEnd = this.handleEdgeCtrlDragEnd.bind(this);
+    }
+
+    componentDidMount() {
+        const id = parseInt(this.props.projectId);
+        DBService.nodes.where('projectId').equals(id).toArray().then(nodes => {
+            this.setState({
+                projectId: id,
+                draggableItems: nodes,
+                isDirtyDB: false
+            });
+
+            // Initialize the edges here
+            this.state.draggableItems.forEach(item => {
+                console.log(`${item.id} ${item.initialX} ${item.initialY}`);
+                this.handleDragMove(item.id, item.initialX, item.initialY);
+            });
+        }).catch(error => {
+            console.error(error.stack || error);
+        });
     }
     
     componentDidUpdate() {
@@ -53,7 +79,17 @@ export default class WorkArea extends React.Component {
         }));
     }
 
-    handleMoveEnd(i, dx, dy) {
+    handleDragMove(id, dx, dy) {
+        // How will we pass this to the edge itself?
+        let edges = this.state.edges[id];
+        if (edges && edges.length > 0) {
+            edges.forEach(callable => {
+                callable(dx, dy);
+            });
+        }
+    }
+
+    handleDragEnd(i, dx, dy) {
         let items = [...this.state.draggableItems];
         let item = {...items[i]};
         
@@ -70,6 +106,34 @@ export default class WorkArea extends React.Component {
         this.setState(state => ({nodeCtrlHidden: !state.nodeCtrlHidden}));
     }
 
+    toggleNodeOptions(i) {
+        if (this.state.selectedNodeId === i)
+            this.setState({selectedNodeId: 0});
+        else
+            this.setState({selectedNodeId: i});
+    }
+
+    handleEdgeCtrlDragEnd(event, id) {
+        // TODO: Check if clientX and clientY from events work
+        let x = event.clientX;
+        let y = event.clientY;
+
+        let draggable = document.elementFromPoint(x, y);
+        let oldDraggableVisibility = draggable.style.visibility;
+        draggable.style.visibility = 'hidden';
+
+        let draggableBG = document.elementFromPoint(x, y);
+        draggableBG.style.visibility = 'hidden';
+
+        let element = document.elementFromPoint(x, y);
+
+        draggable.style.visibility = oldDraggableVisibility;
+        
+        if (element.getAttribute('name') !== `node-${id}`) {
+            // do something
+        }
+    }
+
     render() {
         if (this.state.draggableItems.length === 0)
             return null;
@@ -81,12 +145,12 @@ export default class WorkArea extends React.Component {
                 <Zoom width={width} 
                     height={height}
                     scaleXMin={1/4}
-                    scaleXMax={1}
+                    scaleXMax={2}
                     scaleYMin={1/4}
-                    scaleYMax={1}
+                    scaleYMax={2}
                     transformMatrix={initialTransformZoom}>
                     {zoom => (
-                        <div className="relative">
+                        <div className="relative bg-gray-300">
                             <svg width={width} height={height} style={{cursor: zoom.isDragging ? 'grabbing' : 'grab' }}>
                                 <defs>
                                     <filter id="nodeShadow" x="-50%" y="-50%" width="160%" height="160%">
@@ -100,62 +164,64 @@ export default class WorkArea extends React.Component {
                                       fill="transparent"
                                       onTouchStart={zoom.dragStart}
                                       onTouchMove={zoom.dragMove}
-                                      onTouchEnd={zoom.dragEnd}
+                                      onTouchEnd={() => {
+                                          this.toggleNodeOptions(0);
+                                          zoom.dragEnd();
+                                      }}
                                       onMouseDown={zoom.dragStart}
                                       onMouseMove={zoom.dragMove}
-                                      onMouseUp={zoom.dragEnd}
+                                      onMouseUp={() => {
+                                          this.toggleNodeOptions(0);
+                                          zoom.dragEnd();
+                                      }}
                                       onMouseLeave={() => {
                                           if (zoom.isDragging) zoom.dragEnd();
                                       }} />
-                                <g transform={zoom.toString()}>
+                                <g name="node-root"
+                                   transform={zoom.toString()}>
                                     {this.state.draggableItems.map((item, i) => (
-                                        <ScaledDrag key={`${item.id}`} 
-                                              width={width} 
-                                              height={height}
-                                              startX={item.initialX}
-                                              startY={item.initialY}
-                                              scaleX={zoom.transformMatrix.scaleX}
-                                              scaleY={zoom.transformMatrix.scaleY}
-                                              onDragStart={() => this.handleDragStart(i)}>
-                                            {({ dragStart, dragEnd, dragMove, isDragging, dx, dy }) =>
-                                                (false && isDragging) || (
-                                                    <g key={`node-${item.id}`}
-                                                       transform={`translate(${dx}, ${dy})`}
-                                                       style={{cursor: isDragging ? 'move' : 'hand' }}
-                                                       onMouseMove={dragMove}
-                                                       onMouseDown={dragStart}
-                                                       onMouseUp={event => {
-                                                           this.handleMoveEnd(i, dx, dy);
-                                                           dragEnd(event);
-                                                       }}
-                                                       onTouchMove={dragMove}
-                                                       onTouchStart={dragStart}
-                                                       onTouchEnd={event => {
-                                                           this.handleMoveEnd(i, dx, dy);
-                                                           dragEnd(event);
-                                                       }}>
-                                                        <rect className="node-root fill-current text-gray-600" 
-                                                              width="200" 
-                                                              height="150" 
-                                                              rx="10" 
-                                                              filter="url(#nodeShadow)"/>
-                                                        <text className="fill-current text-gray-100 text-2xl font-bold" 
-                                                              x={15} 
-                                                              y={30}>
-                                                            {item.name}
-                                                        </text>
+                                        <g key={`${item.id}`} >
+                                            {item.connectedTo.map(id => (
+                                                <EdgeStart key={`edge-${item.id}-${id}`} changePosCallable={callable => {
+                                                    let edges = this.state.edges;
+                                                    if(!edges[item.id])
+                                                        edges[item.id] = [];
 
+                                                    edges[item.id].push(callable);
+                                                    this.setState({edges: edges});
+                                                }}>
+                                                    {({startDx, startDy}) => (
+                                                        <EdgeEnd changePosCallable={callable => {
+                                                            let edges2 = this.state.edges;
+                                                            if(!edges2[id])
+                                                                edges2[id] = [];
+                                                            
+                                                            edges2[id].push(callable);
+                                                            this.setState({edges: edges2});
+                                                        }}>
+                                                            {({endDx, endDy}) => (
+                                                                <path d={`M${startDx + 300} ${startDy + 50} Q${startDx + 350} ${startDy + 50} ${((endDx - startDx - 300) / 2) + (startDx + 300)} ${((endDy + 50 - startDy - 50) / 2) + (startDy + 50)} Q${endDx - 50} ${endDy + 50} ${endDx} ${endDy + 50}`} 
+                                                                      stroke="black" 
+                                                                      strokeWidth="5" 
+                                                                      fill="none" />
+                                                            )}
+                                                        </EdgeEnd>
+                                                    )}
+                                                </EdgeStart>
+                                            ))}
 
-                                                        {/*
-                                                        <text className="fill-current text-gray-100 text-2xl" x={15} y={60}>{`(${dx}, ${dy})`}</text>
-                                                        <text className="fill-current text-gray-100 text-2xl" x={15} y={90}>{`(${item.initialX}, ${item.initialY})`}</text>
-                                                        */}
-                                                    </g>
-                                                )
-                                            }
-                                        </ScaledDrag>
-                                    ))   
-                                    }
+                                            <Node item={item}
+                                                i={i}
+                                                width={width}
+                                                height={height}
+                                                zoom={zoom}
+                                                handleDragStart={this.handleDragStart}
+                                                handleDragMove={this.handleDragMove}
+                                                handleDragEnd={this.handleDragEnd}
+                                                handleEdgeCtrlDragEnd={this.handleEdgeCtrlDragEnd}
+                                                toggleNodeOptions={this.toggleNodeOptions} />
+                                        </g>
+                                    ))}
                                 </g>
                             </svg>
                             <div className="pin-bot-right absolute pb-4 pr-4 sm:pb-6 sm:pr-6 flex flex-col items-end">
@@ -167,7 +233,7 @@ export default class WorkArea extends React.Component {
                                         onClick={() => zoom.scale({scaleX: 0.8, scaleY: 0.8})}>
                                     <FontAwesomeIcon icon="minus" />
                                 </button>
-                                <button className="px-2 py-1 rounded text-xs lg:text-base bg-gray-400 hover:bg-gray-900 text-gray-900 hover:text-gray-400" onClick={zoom.reset}>
+                                <button className="px-2 py-1 rounded text-xs lg:text-base select-none bg-gray-400 hover:bg-gray-900 text-gray-900 hover:text-gray-400" onClick={zoom.reset}>
                                     Reset
                                 </button>
                             </div>
@@ -184,6 +250,71 @@ export default class WorkArea extends React.Component {
                         </div>
                     )}
                 </Zoom>
+                <div className="hidden overlay z-30 bg-gray-900 opacity-25">
+                    
+                </div>
+            </>
+        );
+    }
+}
+
+class EdgeStart extends React.Component {
+    constructor(props){
+        super(props);
+
+        this.state = {
+            startDx: 0,
+            startDy: 0
+        };
+        
+        this.handlePosChanged = this.handlePosChanged.bind(this);
+    }
+
+    componentDidMount() {
+        this.props.changePosCallable(this.handlePosChanged);
+    }
+
+    handlePosChanged(dx, dy) {
+        this.setState({startDx: dx, startDy: dy});
+    }
+
+    render() {
+        const {startDx, startDy} = this.state;
+        const {children} = this.props;
+        return (
+            <>
+            {children({ startDx, startDy })}
+            </>
+        );
+    }
+}
+
+class EdgeEnd extends React.Component {
+    constructor(props){
+        super(props);
+
+        this.state = {
+            endDx: 0,
+            endDy: 0
+        };
+
+        this.handlePosChanged = this.handlePosChanged.bind(this);
+    }
+
+    componentDidMount() {
+        this.props.changePosCallable(this.handlePosChanged);
+    }
+
+    handlePosChanged(dx, dy) {
+        this.setState({endDx: dx, endDy: dy});
+    }
+
+    render() {
+        const {endDx, endDy} = this.state;
+        const {children} = this.props;
+        return (
+            <>
+            {children({ endDx, endDy })}
             </>
         );
     }

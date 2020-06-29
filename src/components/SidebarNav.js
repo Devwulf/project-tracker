@@ -33,7 +33,7 @@ export default class SidebarNav extends React.Component {
 
     render() {
         return (
-            <nav className="w-full lg:w-3/12 xl:w-1/5">
+            <nav className="nav">
                 {/* 
                 * Plan is to have a top navigation for md and below
                 * screen sizes, but have sidebar for lg and above

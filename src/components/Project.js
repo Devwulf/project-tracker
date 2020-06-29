@@ -40,8 +40,7 @@ export default class Project extends React.Component {
     render() {
         if (this.state.selectedProject)
             return(
-                <div className="flex flex-col h-full text-gray-900">
-                    { /* TODO: Hide this in smaller screens and show a  */ }
+                <div className="main">
                     <div className="relative">
                         <div className="absolute w-full z-10">
                             <div  className={`${this.state.topHidden ? "hidden" : "flex"}  px-4 py-2 sm:p-6 items-center justify-between shadow bg-gray-100`}>
@@ -50,7 +49,7 @@ export default class Project extends React.Component {
                                     <span className="text-gray-700">{this.state.selectedProject.description}</span>
                                 </div>
                                 <div className="">
-                                    <button className="px-3 py-1 rounded-md text-indigo-500 border border-indigo-500 hover:bg-indigo-500 hover:text-gray-100">
+                                    <button className="px-3 py-1 rounded-md text-indigo-500 border select-none border-indigo-500 hover:bg-indigo-500 hover:text-gray-100">
                                         <FontAwesomeIcon className="mr-2" icon="pencil-alt" />
                                         Edit
                                     </button>
@@ -64,15 +63,13 @@ export default class Project extends React.Component {
                         </div>
                     </div>
                     { /* Working area where nodes are found */ }
-                    <div className="h-full">
-                        <ParentSize>
-                            {
-                                ({width, height}) => (
-                                    <WorkArea projectId={this.props.projectId} width={width} height={height} />
-                                )
-                            }
-                        </ParentSize>
-                    </div>
+                    <ParentSize>
+                        {
+                            ({width, height}) => (
+                                <WorkArea projectId={this.props.projectId} width={width} height={height} />
+                            )
+                        }
+                    </ParentSize>
                 </div>
             );
 

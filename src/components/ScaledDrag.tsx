@@ -57,15 +57,14 @@ export default class ScaledDrag extends React.Component<DragProps, DragState> {
   state = {
     x: undefined,
     y: undefined,
-    dx: this.props.startX,
-    dy: this.props.startY,
+    dx: this.props.startX || 0,
+    dy: this.props.startY || 0,
     isDragging: false,
   };
 
   handleDragStart = (event: MouseOrTouchEvent) => {
     const { onDragStart, resetOnStart, scaleX, scaleY } = this.props;
     event.persist();
-
     this.setState(
       ({ dx, dy }) => {
         const point = localPoint(event) || { x: 0, y: 0 };
@@ -106,12 +105,16 @@ export default class ScaledDrag extends React.Component<DragProps, DragState> {
     );
   };
 
-  handleDragEnd = (event: MouseOrTouchEvent) => {
+  handleDragEnd = (event: MouseOrTouchEvent, reset = false) => {
     const { onDragEnd } = this.props;
     event.persist();
 
-    this.setState(
-      { isDragging: false },
+    this.setState(state => (
+      { 
+        isDragging: false,
+        dx: reset ? 0 : state.dx,
+        dy: reset ? 0 : state.dy
+      }),
       onDragEnd &&
         (() => {
           onDragEnd({ ...this.state, event });

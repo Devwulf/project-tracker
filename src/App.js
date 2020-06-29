@@ -41,9 +41,9 @@ export default class App extends React.Component {
 
   render() {
     return (
-      <div className="flex flex-col lg:flex-row h-screen">
+      <div className="flex flex-col lg:flex-row">
         <SidebarNav projects={this.state.projects} />
-        <article className="flex-grow h-full bg-gray-300">
+        <article>
           <Switch>
             <Route path="/project/:projectId">
               <ParamsProvider>

@@ -66,14 +66,14 @@ export default class Node extends React.Component {
                                 }}>
                                 <g onMouseUp={() => this.props.toggleNodeOptions(this.props.item.id)} 
                                     onTouchEnd={() => this.props.toggleNodeOptions(this.props.item.id)}>
-                                    <rect className="node-root fill-current text-gray-600" 
+                                    <rect data-name={`node-${this.props.item.id}`}
+                                            className="node-root fill-current text-gray-600" 
                                             width="300" 
                                             height="100" 
                                             rx="7"
-                                            style={{stroke: this.state.selectedNodeId === this.props.item.id ? "#4a5568" : "none", strokeWidth: 7}}
+                                            style={{stroke: this.props.selectedNodeId === this.props.item.id ? "#4a5568" : "none", strokeWidth: 7}}
                                             filter="url(#nodeShadow)"/>
-                                    <foreignObject name={`node-${this.props.item.id}`}
-                                                    width="300" 
+                                    <foreignObject width="300" 
                                                     height="100">
                                         <div className="p-4 flex items-center w-full h-full pointer-events-none">
                                             <div className="flex flex-col w-full text-gray-800">
@@ -177,19 +177,16 @@ export default class Node extends React.Component {
                                         scaleX={this.props.zoom.transformMatrix.scaleX}
                                         scaleY={this.props.zoom.transformMatrix.scaleY}
                                         onDragStart={() => this.props.handleDragStart(this.props.i)}
-                                        resetOnStart={true}>
+                                        onDragEnd={state => this.props.handleEdgeCtrlDragEnd(state.event, this.props.item)}
+                                        resetOnStart={true}
+                                        resetOnEnd={true}>
                                 {({ dragStart, dragEnd, dragMove, isDragging, dx, dy }) => 
                                     (false && isDragging) || (
                                         <g transform={`translate(${dx}, ${dy})`}
                                             className="z-30"
                                             onMouseMove={dragMove}
                                             onMouseDown={dragStart}
-                                            onMouseUp={event => {
-                                                //this.props.handleEdgeCtrlDragEnd(event, item.id);
-                                                // We always want to reset the position here because
-                                                // the node can have multiple links with other nodes
-                                                dragEnd(event, true);
-                                            }}
+                                            onMouseUp={dragEnd}
                                             onTouchMove={dragMove}
                                             onTouchStart={dragStart}
                                             onTouchEnd={dragEnd}>

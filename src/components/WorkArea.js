@@ -37,25 +37,9 @@ export default class WorkArea extends React.Component {
         this.toggleNodeCtrl = this.toggleNodeCtrl.bind(this);
         this.toggleNodeOptions = this.toggleNodeOptions.bind(this);
         this.handleEdgeCtrlDragEnd = this.handleEdgeCtrlDragEnd.bind(this);
-    }
-
-    componentDidMount() {
-        const id = parseInt(this.props.projectId);
-        DBService.nodes.where('projectId').equals(id).toArray().then(nodes => {
-            this.setState({
-                projectId: id,
-                draggableItems: nodes,
-                isDirtyDB: false
-            });
-
-            // Initialize the edges here
-            this.state.draggableItems.forEach(item => {
-                console.log(`${item.id} ${item.initialX} ${item.initialY}`);
-                this.handleDragMove(item.id, item.initialX, item.initialY);
-            });
-        }).catch(error => {
-            console.error(error.stack || error);
-        });
+        this.handleOnEdgeCreated = this.handleOnEdgeCreated.bind(this);
+        this.handleOnEdgeDelete = this.handleOnEdgeDelete.bind(this);
+        this.checkGraphCycleExists = this.checkGraphCycleExists.bind(this);
     }
     
     componentDidUpdate() {
@@ -71,6 +55,15 @@ export default class WorkArea extends React.Component {
                 console.error(error.stack || error);
             });
         }
+
+        if (this.state.isDirtyDOM) {
+            // Initialize the edge positions here
+            this.state.draggableItems.forEach(item => {
+                this.handleDragMove(item.id, item.initialX, item.initialY);
+            });
+
+            this.setState({isDirtyDOM: false});
+        }
     }
 
     handleDragStart(i) {
@@ -83,8 +76,8 @@ export default class WorkArea extends React.Component {
         // How will we pass this to the edge itself?
         let edges = this.state.edges[id];
         if (edges && edges.length > 0) {
-            edges.forEach(callable => {
-                callable(dx, dy);
+            edges.forEach(edge => {
+                edge.callable(dx, dy);
             });
         }
     }
@@ -113,25 +106,106 @@ export default class WorkArea extends React.Component {
             this.setState({selectedNodeId: i});
     }
 
-    handleEdgeCtrlDragEnd(event, id) {
+    handleEdgeCtrlDragEnd(event, item) {
         // TODO: Check if clientX and clientY from events work
         let x = event.clientX;
         let y = event.clientY;
 
-        let draggable = document.elementFromPoint(x, y);
-        let oldDraggableVisibility = draggable.style.visibility;
-        draggable.style.visibility = 'hidden';
+        let elements = document.elementsFromPoint(x, y);
+        let element = elements.find(e => e.getAttribute('data-name'));
+        if (!element)
+            return;
 
-        let draggableBG = document.elementFromPoint(x, y);
-        draggableBG.style.visibility = 'hidden';
+        let name = element.getAttribute('data-name');
+        if (name === undefined || name === null)
+            return null;
 
-        let element = document.elementFromPoint(x, y);
+        if (name !== `node-${item.id}`) {
+            // register this new id to the connected array of this item
+            let nodes = this.state.draggableItems;
 
-        draggable.style.visibility = oldDraggableVisibility;
-        
-        if (element.getAttribute('name') !== `node-${id}`) {
-            // do something
+            let otherId = parseInt(name.substring(5));
+            let otherConnected = nodes.find(n => n.id === otherId).connectedTo;
+
+            // get current connected array from db
+            // Note: A get here from the db shouldn't really happen, let the
+            // update lifecycle handle the getting from database, this is supposed
+            // to trust the nodes that the state currently has
+            let node = nodes.find(n => n.id === item.id);
+                
+            let connected = node.connectedTo;
+            let index = connected.indexOf(otherId);
+
+            if (index < 0) {
+                // Check if adding this node creates a cycle in the graph
+                if (this.checkGraphCycleExists(otherConnected, item.id))
+                    return;
+
+                connected.push(otherId); // add id if not found
+            }
+
+            DBService.nodes.update(item.id, {connectedTo: connected}).then(updated => {
+                if (updated)
+                    console.log("added connected to");
+                this.setState({isDirtyDB: true});
+            });
         }
+    }
+
+    // Starting arr is the connectedTo arr of the node
+    // the user wants to connect to
+    // The id is the id of the node the user is
+    // connecting from
+    checkGraphCycleExists(connectedTo, id) {
+        if (connectedTo.some(e => e === id))
+            return true;
+
+        var result = false;
+
+        for (var i = 0; i < connectedTo.length; i++) {
+            let e = connectedTo[i];
+            // Get the connectedTo array of the node with e as the id
+            let newArr = this.state.draggableItems.find(n => n.id === e).connectedTo;
+            result = this.checkGraphCycleExists(newArr, id);
+            if (result)
+                break;
+        }
+
+        return result;
+    }
+
+    handleOnEdgeCreated(fromId, toId, callable) {
+        let edges = this.state.edges;
+        if(!edges[fromId])
+            edges[fromId] = [];
+
+        let edge = {
+            to: toId,
+            callable: callable
+        };
+        edges[fromId].push(edge);
+        this.setState({edges: edges, isDirtyDOM: true});
+    }
+
+    handleOnEdgeDelete(itemId, otherId) {
+        let connected = this.state.draggableItems.find(n => n.id === itemId).connectedTo;
+        let index = connected.indexOf(otherId);
+        if (index < 0)
+            return;
+
+        connected.splice(index, 1); // remove if in array already
+        // Also remove the callables from the edges array
+        let edges = this.state.edges;
+        edges[itemId].removeIf(edge => edge.to === otherId);
+        edges[otherId].removeIf(edge => edge.to === itemId);
+
+        this.setState({edges: edges});
+
+        DBService.nodes.update(itemId, {connectedTo: connected}).then(updated => {
+            if (updated)
+                console.log("added connected to");
+            this.setState({isDirtyDB: true});
+        });
     }
 
     render() {
@@ -182,28 +256,33 @@ export default class WorkArea extends React.Component {
                                     {this.state.draggableItems.map((item, i) => (
                                         <g key={`${item.id}`} >
                                             {item.connectedTo.map(id => (
-                                                <EdgeStart key={`edge-${item.id}-${id}`} changePosCallable={callable => {
-                                                    let edges = this.state.edges;
-                                                    if(!edges[item.id])
-                                                        edges[item.id] = [];
-
-                                                    edges[item.id].push(callable);
-                                                    this.setState({edges: edges});
-                                                }}>
+                                                <EdgeStart key={`edge-${item.id}-${id}`} 
+                                                           changePosCallable={callable => {
+                                                               this.handleOnEdgeCreated(item.id, id, callable); 
+                                                           }}>
                                                     {({startDx, startDy}) => (
                                                         <EdgeEnd changePosCallable={callable => {
-                                                            let edges2 = this.state.edges;
-                                                            if(!edges2[id])
-                                                                edges2[id] = [];
-                                                            
-                                                            edges2[id].push(callable);
-                                                            this.setState({edges: edges2});
+                                                            this.handleOnEdgeCreated(id, item.id, callable); 
                                                         }}>
                                                             {({endDx, endDy}) => (
-                                                                <path d={`M${startDx + 300} ${startDy + 50} Q${startDx + 350} ${startDy + 50} ${((endDx - startDx - 300) / 2) + (startDx + 300)} ${((endDy + 50 - startDy - 50) / 2) + (startDy + 50)} Q${endDx - 50} ${endDy + 50} ${endDx} ${endDy + 50}`} 
-                                                                      stroke="black" 
-                                                                      strokeWidth="5" 
-                                                                      fill="none" />
+                                                                <Edge startDx={startDx}
+                                                                      startDy={startDy}
+                                                                      endDx={endDx}
+                                                                      endDy={endDy}
+                                                                      handleOnClick={() => this.handleOnEdgeDelete(item.id, id)}>
+                                                                    {({midPointX, midPointY, isHovered}) => (
+                                                                        <foreignObject visibility={isHovered ? 'visible' : 'hidden'}
+                                                                                       x={midPointX - 15}
+                                                                                       y={midPointY - 10}
+                                                                                       width="30"
+                                                                                       height="20"
+                                                                                       className="pointer-events-none">
+                                                                            <div className="w-full h-full flex items-center justify-center bg-gray-800">
+                                                                                <FontAwesomeIcon className="text-gray-300" icon="times" />
+                                                                            </div>
+                                                                        </foreignObject>
+                                                                    )}
+                                                                </Edge>
                                                             )}
                                                         </EdgeEnd>
                                                     )}
@@ -215,6 +294,7 @@ export default class WorkArea extends React.Component {
                                                 width={width}
                                                 height={height}
                                                 zoom={zoom}
+                                                selectedNodeId={this.state.selectedNodeId}
                                                 handleDragStart={this.handleDragStart}
                                                 handleDragMove={this.handleDragMove}
                                                 handleDragEnd={this.handleDragEnd}
@@ -255,6 +335,14 @@ export default class WorkArea extends React.Component {
                 </div>
             </>
         );
+    }
+}
+
+Array.prototype.removeIf = function(predicate) {
+    let i = this.length;
+    while (i--) {
+        if (predicate(this[i]))
+            this.splice(i, 1);
     }
 }
 
@@ -315,6 +403,52 @@ class EdgeEnd extends React.Component {
         return (
             <>
             {children({ endDx, endDy })}
+            </>
+        );
+    }
+}
+
+class Edge extends React.Component {
+    constructor(props){
+        super(props);
+
+        this.state = {
+            isHovered: false
+        };
+
+        this.handleOnEnter = this.handleOnEnter.bind(this);
+        this.handleOnExit = this.handleOnExit.bind(this);
+    }
+
+    handleOnEnter() {
+        this.setState({isHovered: true});
+    }
+
+    handleOnExit() {
+        this.setState({isHovered: false});
+    }
+
+    render() {
+        let midPointX = ((this.props.endDx - this.props.startDx - 300) / 2) + (this.props.startDx + 300);
+        let midPointY = ((this.props.endDy + 50 - this.props.startDy - 50) / 2) + (this.props.startDy + 50);
+
+        const {isHovered} = this.state;
+        const {children} = this.props;
+        return(
+            <>
+                <path d={`M${this.props.startDx + 300} ${this.props.startDy + 50} Q${this.props.startDx + 350} ${this.props.startDy + 50} ${midPointX} ${midPointY} Q${this.props.endDx - 50} ${this.props.endDy + 50} ${this.props.endDx} ${this.props.endDy + 50}`} 
+                    className="stroke-current text-gray-800 pointer-events-none"
+                    strokeWidth="5" 
+                    fill="none" />
+                <path d={`M${this.props.startDx + 300} ${this.props.startDy + 50} Q${this.props.startDx + 350} ${this.props.startDy + 50} ${midPointX} ${midPointY} Q${this.props.endDx - 50} ${this.props.endDy + 50} ${this.props.endDx} ${this.props.endDy + 50}`} 
+                    stroke="transparent"
+                    strokeWidth="50" 
+                    fill="none" 
+                    onMouseEnter={this.handleOnEnter}
+                    onMouseLeave={this.handleOnExit}
+                    onMouseUp={this.props.handleOnClick}
+                    onTouchEnd={this.props.handleOnClick} />
+                {children({midPointX, midPointY, isHovered})} 
             </>
         );
     }

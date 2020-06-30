@@ -14,6 +14,8 @@ export type DragProps = {
   captureDragArea?: boolean;
   /** Whether to reset drag state upon the start of a new drag. */
   resetOnStart?: boolean;
+  /** Whether to reset drag state upon the end of a drag. */
+  resetOnEnd?: boolean;
   /** Optional callback invoked upon drag end. */
   onDragEnd?: (args: HandlerArgs) => void;
   /** Optional callback invoked upon drag movement. */
@@ -52,6 +54,7 @@ export default class ScaledDrag extends React.Component<DragProps, DragState> {
   static defaultProps = {
     captureDragArea: true,
     resetOnStart: false,
+    resetOnEnd: false,
   };
 
   state = {
@@ -105,15 +108,15 @@ export default class ScaledDrag extends React.Component<DragProps, DragState> {
     );
   };
 
-  handleDragEnd = (event: MouseOrTouchEvent, reset = false) => {
-    const { onDragEnd } = this.props;
+  handleDragEnd = (event: MouseOrTouchEvent) => {
+    const { onDragEnd, resetOnEnd } = this.props;
     event.persist();
-
+    
     this.setState(state => (
       { 
         isDragging: false,
-        dx: reset ? 0 : state.dx,
-        dy: reset ? 0 : state.dy
+        dx: resetOnEnd ? 0 : state.dx,
+        dy: resetOnEnd ? 0 : state.dy
       }),
       onDragEnd &&
         (() => {

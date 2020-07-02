@@ -27,11 +27,11 @@ class DBService {
 
         this.db.nodes.toArray().then(nodes => {
             if (nodes.length <= 0) {
-                this.addNode(1, "Test", 150, 100, []);
-                this.addNode(1, "Another Test", 200, 300, [1]);
-                this.addNode(1, "Another Another Test", 300, 450, [2]);
-                this.addNode(2, "Different Project", 100, 200, []);
-                this.addNode(2, "Another node", 150, 400, []);
+                this.addNode(1, "Test", "Description", 150, 100, [2], []);
+                this.addNode(1, "Another Test", "Description", 200, 300, [3], [1]);
+                this.addNode(1, "Another Another Test", "Description", 300, 450, [], [2]);
+                this.addNode(2, "Different Project", "Description", 100, 200, [], []);
+                this.addNode(2, "Another node", "Description", 150, 400, [], []);
             }
         });
     }
@@ -53,12 +53,14 @@ class DBService {
         return this.db.nodes;
     }
 
-    addNode(projectId, name, initialX, initialY, connectedTo) {
+    addNode(projectId, name, description, initialX, initialY, connectedFrom, connectedTo) {
         const node = {
             projectId,
             name,
+            description,
             initialX,
             initialY,
+            connectedFrom,
             connectedTo
         };
 

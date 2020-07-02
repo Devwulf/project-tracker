@@ -22,6 +22,8 @@ export type DragProps = {
   onDragMove?: (args: HandlerArgs) => void;
   /** Optional callback invoked upon drag start. */
   onDragStart?: (args: HandlerArgs) => void;
+  /** Optional callback invoked upon clicking. */
+  onClick?: (event: MouseOrTouchEvent) => void;
 
   /** The starting value for x */
   startX: number;

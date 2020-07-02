@@ -3,13 +3,17 @@
   "version": "0.3.2",
   "private": true,
   "dependencies": {
+    "@ckeditor/ckeditor5-build-classic": "^20.0.0",
+    "@ckeditor/ckeditor5-react": "^2.1.0",
     "@fortawesome/fontawesome-svg-core": "^1.2.29",
     "@fortawesome/free-solid-svg-icons": "^5.13.1",
     "@fortawesome/react-fontawesome": "^0.1.11",
     "@vx/drag": "0.0.197",
+    "@vx/event": "0.0.197",
     "@vx/responsive": "0.0.197",
     "@vx/zoom": "0.0.197",
     "dexie": "^3.0.1",
+    "dompurify": "^2.0.12",
     "prop-types": "^15.7.2",
     "react": "^16.13.1",
     "react-detect-offline": "^2.4.0",
@@ -17,6 +21,7 @@
     "react-router-dom": "^5.2.0",
     "react-scripts": "3.4.1",
     "react-scrollbars-custom": "^4.0.25",
+    "react-tappable": "^1.0.4",
     "typescript": "^3.9.5"
   },
   "scripts": {

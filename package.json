@@ -1,4 +1,5 @@
 {
+  "homepage": "http://devwulf.github.io/project-tracker",
   "name": "project-tracker",
   "version": "0.4.2",
   "private": true,
@@ -30,7 +31,9 @@
     "eject": "react-scripts eject",
     "build:css": "postcss src/assets/tailwind.css -o src/assets/main.css",
     "watch:css": "postcss src/assets/tailwind.css -o src/assets/main.css",
-    "setup": "npm install tailwindcss postcss-cli autoprefixer -D"
+    "setup": "npm install tailwindcss postcss-cli autoprefixer -D",
+    "predeploy": "npm run build",
+    "deploy": "gh-pages -d build"
   },
   "eslintConfig": {
     "extends": "react-app"
@@ -49,6 +52,7 @@
   },
   "devDependencies": {
     "autoprefixer": "^9.8.3",
+    "gh-pages": "^3.1.0",
     "postcss-cli": "^7.1.1",
     "tailwindcss": "^1.4.6"
   }

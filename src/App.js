@@ -12,15 +12,15 @@ import Project from './components/Project';
 library.add(fas);
 
 export default class App extends React.Component {
-  constructor(props) {
-    super(props);
-    this.state = {
-      projects: []
-    };
+    constructor(props) {
+        super(props);
+        this.state = {
+            projects: []
+        };
 
-    this.refreshProjects = this.refreshProjects.bind(this);
-    this.handleAddProject = this.handleAddProject.bind(this);
-  }
+        this.refreshProjects = this.refreshProjects.bind(this);
+        this.handleAddProject = this.handleAddProject.bind(this);
+    }
 
   componentDidMount() {
     this.refreshProjects();
@@ -42,14 +42,14 @@ export default class App extends React.Component {
   render() {
     return (
       <div className="flex flex-col lg:flex-row">
-        <SidebarNav projects={this.state.projects} />
+        <SidebarNav projects={this.state.projects} refreshProjects={this.refreshProjects} />
         <article>
           <Switch>
             <Route path="/project/:projectId">
               <ParamsProvider>
                 {
                   ({ projectId }) => {
-                    return <Project projectId={projectId} />
+                    return <Project projectId={projectId} refreshProjects={this.refreshProjects} />
                   }
                 }
               </ParamsProvider>

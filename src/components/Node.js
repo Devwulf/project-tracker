@@ -189,7 +189,7 @@ export default class Node extends React.Component {
                                         height={this.props.height}
                                         scaleX={this.props.zoom.transformMatrix.scaleX}
                                         scaleY={this.props.zoom.transformMatrix.scaleY}
-                                        onDragStart={() => this.props.handleDragStart(this.props.tem.id)}
+                                        onDragStart={() => this.props.handleDragStart(this.props.item.id)}
                                         onDragEnd={state => this.props.handleEdgeCtrlDragEnd(state.event, this.props.item)}
                                         resetOnStart={true}
                                         resetOnEnd={true}>

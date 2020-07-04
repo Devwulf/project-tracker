@@ -12,6 +12,7 @@ import '../assets/content-styles.css';
 
 import DBService from '../services/DBService';
 import Node from './Node';
+import Modal from './Modal';
 
 const initialTransformZoom = {
     scaleX: 1/2,
@@ -35,11 +36,10 @@ export default class WorkArea extends React.Component {
             selectedNodeId: 0,
             listeners: {},
             edges: {},
-            isNodeModalOpen: false,
+            openNodeModal: null,
             nodeModalMode: 0, // 0 for viewing node, 1 for creating node, 2 for editing
             nodeTitle: "", // used for editing
-            nodeDescription: "",
-            something: false
+            nodeDescription: ""
         };
 
         this.handleDragStart = this.handleDragStart.bind(this);
@@ -53,8 +53,6 @@ export default class WorkArea extends React.Component {
         this.handleOpenViewNode = this.handleOpenViewNode.bind(this);
         this.handleOpenCreateNode = this.handleOpenCreateNode.bind(this);
         this.handleOpenEditNode = this.handleOpenEditNode.bind(this);
-
-        this.handleCloseNodeModal = this.handleCloseNodeModal.bind(this);
 
         this.handleOnNodeCreate = this.handleOnNodeCreate.bind(this);
         this.handleOnNodeUpdate = this.handleOnNodeUpdate.bind(this);
@@ -276,19 +274,18 @@ export default class WorkArea extends React.Component {
     }
 
     handleOpenViewNode(title, description) {
-        this.setState({isNodeModalOpen: true, nodeModalMode: 0, nodeTitle: title, nodeDescription: description});
+        this.state.openNodeModal();
+        this.setState({nodeModalMode: 0, nodeTitle: title, nodeDescription: description});
     }
 
     handleOpenCreateNode() {
-        this.setState({isNodeModalOpen: true, nodeModalMode: 1});
+        this.state.openNodeModal();
+        this.setState({nodeModalMode: 1});
     }
 
     handleOpenEditNode(title, description) {
-        this.setState({isNodeModalOpen: true, nodeModalMode: 2, nodeTitle: title, nodeDescription: description});
-    }
-
-    handleCloseNodeModal() {
-        this.setState({isNodeModalOpen: false});
+        this.state.openNodeModal();
+        this.setState({nodeModalMode: 2, nodeTitle: title, nodeDescription: description});
     }
 
     toggleNodeCtrl() {
@@ -303,9 +300,6 @@ export default class WorkArea extends React.Component {
     }
 
     render() {
-        if (this.state.draggableItems.length === 0)
-            return null;
-
         let width = this.props.width;
         let height = this.props.height;
         return(
@@ -365,6 +359,7 @@ export default class WorkArea extends React.Component {
                                                                       endDx={endDx}
                                                                       endDy={endDy}
                                                                       handleOnClick={() => this.handleOnEdgeDelete(item.id, id)}>
+                                                                          
                                                                     {({midPointX, midPointY, isHovered}) => (
                                                                         <foreignObject visibility={isHovered ? 'visible' : 'hidden'}
                                                                                        x={midPointX - 15}
@@ -429,41 +424,33 @@ export default class WorkArea extends React.Component {
                     )}
                 </Zoom>
                 {/* Modals here */}
-                <div className={`${this.state.isNodeModalOpen ? 'flex' : 'hidden'} absolute-full items-center justify-center z-30`}>
-                    <div className="absolute-full opacity-50 bg-gray-900 cursor-pointer"
-                         onClick={this.handleCloseNodeModal} ></div>
-                    <div className="p-4 sm:p-8 w-2/3 lg:w-1/2 bg-gray-100 z-40 rounded shadow-lg">
-                        <div className="mb-4 flex items-center justify-between text-gray-800">
-                            <span className="text-lg font-medium">
-                                {`${this.state.nodeModalMode === 0 ? 'View' : 
-                                    this.state.nodeModalMode === 1 ? 'Create New' : 'Edit'} Node`}
-                            </span>
-                            <FontAwesomeIcon className="text-lg sm:text-xl cursor-pointer" 
-                                             icon="times"
-                                             onClick={this.handleCloseNodeModal} />
-                        </div>
-                        <div className="">
-                            {(this.state.nodeModalMode === 0 &&
-                                <NodeView title={this.state.nodeTitle}
-                                          description={this.state.nodeDescription}
-                                          handleCloseModal={this.handleCloseNodeModal} />
-                            ) ||
-                            (this.state.nodeModalMode === 1 &&
-                                <NodeForm title=""
-                                          description=""
-                                          handleOnNodeCreate={this.handleOnNodeCreate}
-                                          handleCloseModal={this.handleCloseNodeModal} />
-                            ) ||
-                            (this.state.nodeModalMode === 2 &&
-                                <NodeForm itemId={this.state.selectedNodeId}
-                                          title={this.state.nodeTitle}
-                                          description={this.state.nodeDescription}
-                                          handleOnNodeUpdate={this.handleOnNodeUpdate}
-                                          handleCloseModal={this.handleCloseNodeModal} />
-                            )}
-                        </div>
-                    </div>
-                </div>
+                <Modal title={`${this.state.nodeModalMode === 0 ? 'View' : 
+                                this.state.nodeModalMode === 1 ? 'Create New' : 'Edit'} Node`}
+                       openModal={callable => {
+                            if (!this.state.openNodeModal)
+                                this.setState({openNodeModal: callable});
+                        }}>
+                    {({closeModal}) => (
+                        (this.state.nodeModalMode === 0 &&
+                            <NodeView title={this.state.nodeTitle}
+                                        description={this.state.nodeDescription}
+                                        handleCloseModal={closeModal} />
+                        ) ||
+                        (this.state.nodeModalMode === 1 &&
+                            <NodeForm title=""
+                                        description=""
+                                        handleOnNodeCreate={this.handleOnNodeCreate}
+                                        handleCloseModal={closeModal} />
+                        ) ||
+                        (this.state.nodeModalMode === 2 &&
+                            <NodeForm itemId={this.state.selectedNodeId}
+                                        title={this.state.nodeTitle}
+                                        description={this.state.nodeDescription}
+                                        handleOnNodeUpdate={this.handleOnNodeUpdate}
+                                        handleCloseModal={closeModal} />
+                        )
+                    )}
+                </Modal>
             </>
         );
     }
@@ -716,5 +703,15 @@ class NodeView extends React.Component {
                 <div className="ck-content" dangerouslySetInnerHTML={{__html: DOMPurify.sanitize(this.props.description)}}></div>
             </div>
         );
+    }
+}
+
+class NodeChecklist extends React.Component {
+    constructor(props) {
+        super(props);
+
+        this.state = {
+            list: []
+        }
     }
 }

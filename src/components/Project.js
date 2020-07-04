@@ -5,17 +5,22 @@ import { ParentSize } from '@vx/responsive';
 
 import DBService from '../services/DBService.js';
 import WorkArea from './WorkArea.js';
+import Modal from './Modal';
+import ProjectForm from './ProjectForm';
 
 export default class Project extends React.Component {
     constructor(props) {
         super(props);
-        
+
         this.state = {
-            selectedProject: { id: 0 },
-            topHidden: false
+            selectedProject:  { id: 0, title: "", description: "" },
+            topHidden: false,
+            openProjectModal: null
         };
 
         this.handleHideTop = this.handleHideTop.bind(this);
+        this.handleOnProjectUpdate = this.handleOnProjectUpdate.bind(this);
+        this.handleOnProjectDelete = this.handleOnProjectDelete.bind(this);
     }
 
     // NOTE: Never ever use this.setState inside a componentDidUpdate()
@@ -37,6 +42,27 @@ export default class Project extends React.Component {
         }));
     }
 
+    handleOnProjectUpdate(title, description) {
+        if (!title || !description)
+            return false;
+
+        DBService.projects.update(this.state.selectedProject.id, {title: title, description: description}).then(() => {
+            this.props.refreshProjects();
+        }).catch(error => {
+            console.error(error.stack || error);
+        });
+
+        return true;
+    }
+
+    handleOnProjectDelete() {
+        DBService.projects.delete(this.state.selectedProject.id).then(() => {
+            this.props.refreshProjects();
+        }).catch(error => {
+            console.error(error.stack || error);
+        });
+    }
+
     render() {
         if (this.state.selectedProject)
             return(
@@ -48,10 +74,16 @@ export default class Project extends React.Component {
                                     <h1 className="text-xl font-bold">{this.state.selectedProject.title}</h1>
                                     <span className="text-gray-700">{this.state.selectedProject.description}</span>
                                 </div>
-                                <div className="">
-                                    <button className="px-3 py-1 rounded-md text-indigo-500 border select-none border-indigo-500 hover:bg-indigo-500 hover:text-gray-100">
+                                <div className="flex flex-col sm:flex-row ml-2">
+                                    <button className="mb-2 sm:mr-2 sm:mb-0 px-3 py-1 rounded-md whitespace-no-wrap text-indigo-500 border select-none border-indigo-500 hover:bg-indigo-500 hover:text-gray-100"
+                                            onClick={this.state.openProjectModal}>
                                         <FontAwesomeIcon className="mr-2" icon="pencil-alt" />
                                         Edit
+                                    </button>
+                                    <button className="px-3 py-1 rounded-md whitespace-no-wrap text-red-500 border select-none border-red-500 hover:bg-red-500 hover:text-gray-100"
+                                            onClick={this.handleOnProjectDelete}>
+                                        <FontAwesomeIcon className="mr-2" icon="times" />
+                                        Delete
                                     </button>
                                 </div>
                             </div>
@@ -70,6 +102,19 @@ export default class Project extends React.Component {
                             )
                         }
                     </ParentSize>
+                    {/* Modals below */}
+                    <Modal title="Edit Project"
+                            openModal={callable => {
+                                if (!this.state.openProjectModal)
+                                    this.setState({openProjectModal: callable});
+                            }}>
+                        {({closeModal}) => (
+                        <ProjectForm title={this.state.selectedProject.title}
+                                        description={this.state.selectedProject.description}
+                                        handleOnProjectUpdate={this.handleOnProjectUpdate}
+                                        handleCloseModal={closeModal} />
+                        )}
+                    </Modal>
                 </div>
             );
 

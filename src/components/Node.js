@@ -13,30 +13,15 @@ export default class Node extends React.Component {
     }
 
     render() {
-         /*() => {
-                let items = [...draggableItems];
-                let currItem = {...items[i]};
-                currItem.x = dx / zoom.transformMatrix.scaleX;
-                currItem.y = dy / zoom.transformMatrix.scaleY;
-                items[i] = currItem;
-                setDraggableItems(items);
-            }*/
-        /* 
-        <g key={`node-${item.id}`}
-            transform={`translate(${dx}, ${dy})`}
-            style={{cursor: isDragging ? 'move' : 'hand' }}
-            onMouseMove={dragMove}
-            onMouseDown={dragStart}
-            onMouseUp={dragEnd}
-            onTouchMove={dragMove}
-            onTouchStart={dragStart}
-            onTouchEnd={dragEnd}>
-            <rect className="node-root fill-current text-gray-600" x={item.initialX} y={item.initialY} width="200" height="150" rx="10" filter="url(#nodeShadow)" />
-            <text className="fill-current text-gray-100 text-2xl" x={item.initialX + 15} y={item.initialY + 30}>{item.name}</text>
-            <text className="fill-current text-gray-100 text-2xl" x={item.initialX + 15} y={item.initialY + 60}>{`(${dx}, ${dy})`}</text>
-        </g>
-        */
-        
+        let color = 'gray';
+        const state = this.props.item.state;
+        if (state === 1)
+            color = 'red';
+        else if (state === 2)
+            color = 'orange';
+        else if (state === 3)
+            color = 'green';
+
         return(
             <ScaledDrag width={this.props.width} 
                     height={this.props.height}
@@ -58,7 +43,7 @@ export default class Node extends React.Component {
                                     dragStart(event);
                                 }}
                                 onMouseUp={event => {
-                                    this.props.handleDragEnd(this.props.item.id, dx, dy);
+                                    this.props.handleDragEnd(this.props.item, dx, dy);
                                     dragEnd(event);
                                 }}
                                 onTouchMove={event => {
@@ -70,7 +55,7 @@ export default class Node extends React.Component {
                                     dragStart(event);
                                 }}
                                 onTouchEnd={event => {
-                                    this.props.handleDragEnd(this.props.item.id, dx, dy);
+                                    this.props.handleDragEnd(this.props.item, dx, dy);
                                     dragEnd(event);
                                 }}>
                                 {/* NOTE: Oh wow, this has been one of my most annoying problems.
@@ -79,7 +64,7 @@ export default class Node extends React.Component {
                                     different kinds of functions to run. But only onPointerUp worked! */}
                                 <g onPointerUp={() => this.props.toggleNodeOptions(this.props.item.id)}>
                                     <rect data-name={`node-${this.props.item.id}`}
-                                            className="node-root fill-current text-gray-600" 
+                                            className={`node-root fill-current text-${color}-600`} 
                                             width="300" 
                                             height="100" 
                                             rx="7"
@@ -89,36 +74,17 @@ export default class Node extends React.Component {
                                     <foreignObject width="300" 
                                                     height="100">
                                             <div className="p-4 flex items-center w-full h-full pointer-events-none">
-                                                <div className="flex flex-col w-full text-gray-800">
+                                                <div className={`flex flex-col w-full text-${color}-900`}>
                                                     <span className="text-2xl font-bold truncate select-none">
                                                         {this.props.item.name}
                                                     </span>
                                                     <span className="text-xl font-medium truncate select-none">
-                                                        {`${5} subgoals`} &#x2022; {`${10} in list`}
+                                                        {`${this.props.item.connectedTo.length} subgoals`} {/*&#x2022; {`${10} in list`}*/}
                                                     </span>
                                                 </div>
                                             </div>
                                     </foreignObject>
                                 </g>
-
-                                    {/* 
-                                    <rect className="node-root fill-current text-gray-600" 
-                                            width="300" 
-                                            height="100" 
-                                            rx="10"
-                                            style={{stroke: this.state.selectedNodeId === item.id ? "#4a5568" : "none", strokeWidth: 7}}
-                                            filter="url(#nodeShadow)"/>
-                                    <text className="node-title fill-current text-gray-100 text-2xl font-medium"
-                                            x={25} 
-                                            y={45}>
-                                        {item.name}
-                                    </text>
-                                    <text className="node-status fill-current text-gray-300 text-xl"
-                                            x={25} 
-                                            y={75}>
-                                        {`${5} subgoals`} &#x2022; {`${10} in list`}
-                                    </text>
-                                    */}
 
                                 {/*
                                 <text className="fill-current text-gray-100 text-2xl" x={15} y={60}>{`(${dx}, ${dy})`}</text>
@@ -182,6 +148,62 @@ export default class Node extends React.Component {
                                             </div>
                                         </foreignObject>
                                     </g>
+
+
+                                    <g onClick={() => this.props.handleOnNodeUpdateState(this.props.item.id, this.props.item.state === 3 ? 0 : 3)}>
+                                        <rect className="fill-current text-green-500"
+                                            x="23"
+                                            y="115"
+                                            width="74"
+                                            height="74"
+                                            rx="10"
+                                            filter="url(#nodeShadow)"/>
+                                        <foreignObject x="23"
+                                                    y="115"
+                                                    width="74" 
+                                                    height="74" 
+                                                    className="text-4xl text-green-800 pointer-events-none">
+                                            <div className="flex items-center justify-center w-full h-full">      
+                                                <FontAwesomeIcon icon="check" />
+                                            </div>
+                                        </foreignObject>
+                                    </g>
+                                    <g onClick={() => this.props.handleOnNodeUpdateState(this.props.item.id, this.props.item.state === 2 ? 0 : 2)}>
+                                        <rect className="fill-current text text-orange-500"
+                                            x="113"
+                                            y="115"
+                                            width="74"
+                                            height="74"
+                                            rx="10"
+                                            filter="url(#nodeShadow)"/>
+                                        <foreignObject x="113"
+                                                    y="115"
+                                                    width="74" 
+                                                    height="74" 
+                                                    className="text-4xl text-orange-800 pointer-events-none">
+                                            <div className="flex items-center justify-center w-full h-full">      
+                                                <FontAwesomeIcon icon="hourglass-half" />
+                                            </div>
+                                        </foreignObject>
+                                    </g>
+                                    <g onClick={() => this.props.handleOnNodeUpdateState(this.props.item.id, this.props.item.state === 1 ? 0 : 1)}>
+                                        <rect className="fill-current text-red-500"
+                                            x="203"
+                                            y="115"
+                                            width="74"
+                                            height="74"
+                                            rx="10"
+                                            filter="url(#nodeShadow)"/>
+                                        <foreignObject x="203"
+                                                    y="115"
+                                                    width="74" 
+                                                    height="74"  
+                                                    className="text-4xl text-red-800 pointer-events-none">
+                                            <div className="flex items-center justify-center w-full h-full">      
+                                                <FontAwesomeIcon icon="times" />
+                                            </div>
+                                        </foreignObject>
+                                    </g>
                                 </>
                             )}
                             <ScaledDrag key={`edge-${this.props.item.id}`}
@@ -190,7 +212,6 @@ export default class Node extends React.Component {
                                         scaleX={this.props.zoom.transformMatrix.scaleX}
                                         scaleY={this.props.zoom.transformMatrix.scaleY}
                                         onDragStart={() => this.props.handleDragStart(this.props.item.id)}
-                                        onDragEnd={state => this.props.handleEdgeCtrlDragEnd(state.event, this.props.item)}
                                         resetOnStart={true}
                                         resetOnEnd={true}>
                                 {({ dragStart, dragEnd, dragMove, isDragging, dx, dy }) => 
@@ -199,10 +220,16 @@ export default class Node extends React.Component {
                                             className="z-30"
                                             onMouseMove={dragMove}
                                             onMouseDown={dragStart}
-                                            onMouseUp={dragEnd}
+                                            onMouseUp={event => {
+                                                this.props.handleEdgeCtrlDragEnd(event, this.props.item, dx, dy);
+                                                dragEnd(event);
+                                            }}
                                             onTouchMove={dragMove}
                                             onTouchStart={dragStart}
-                                            onTouchEnd={dragEnd}>
+                                            onTouchEnd={event => {
+                                                this.props.handleEdgeCtrlDragEnd(this.props.item, dx, dy);
+                                                dragEnd(event);
+                                            }}>
                                             <circle cx="300"
                                                     cy="50"
                                                     r="20"

@@ -14,11 +14,11 @@ export default class ProjectForm extends React.Component {
 
         this.handleOnTitleChange = this.handleOnTitleChange.bind(this);
         this.handleOnDescriptionChange = this.handleOnDescriptionChange.bind(this);
+        this.resetInput = this.resetInput.bind(this);
     }
 
     componentDidUpdate() {
         const {title, description} = this.props;
-        console.log(title + " " + description);
         if (this.state.titleProp === title &&
             this.state.descriptionProp === description)
             return;
@@ -40,6 +40,10 @@ export default class ProjectForm extends React.Component {
 
     handleOnDescriptionChange(event) {
         this.setState({description: event.target.value});
+    }
+
+    resetInput() {
+        this.setState({title: "", description: ""});
     }
 
     render() {
@@ -65,11 +69,15 @@ export default class ProjectForm extends React.Component {
                         value={`${this.props.handleOnProjectCreate ? 'Create' : 'Edit'} Project`}
                         onClick={() => {
                             if (this.props.handleOnProjectCreate) {
-                                if (this.props.handleOnProjectCreate(this.state.title, this.state.description))
+                                if (this.props.handleOnProjectCreate(this.state.title, this.state.description)) {
+                                    this.resetInput();
                                     this.props.handleCloseModal();
+                                }
                             } else if (this.props.handleOnProjectUpdate) {
-                                if (this.props.handleOnProjectUpdate(this.state.title, this.state.description))
+                                if (this.props.handleOnProjectUpdate(this.state.title, this.state.description)) {
+                                    this.resetInput();
                                     this.props.handleCloseModal();
+                                }
                             }
                         }} />
                     <input className="px-4 py-2 sm:mr-2 rounded-md bg-gray-300 text-indigo-500 hover:bg-gray-400 cursor-pointer" 

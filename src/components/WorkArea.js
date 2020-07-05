@@ -1,7 +1,5 @@
-import React, { Children } from 'react';
-import { raise } from '@vx/drag';
+import React from 'react';
 import { Zoom } from '@vx/zoom';
-import { localPoint } from '@vx/event';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import CKEditor from '@ckeditor/ckeditor5-react';
 import ClassicEditor from '@ckeditor/ckeditor5-build-classic';
@@ -34,12 +32,14 @@ export default class WorkArea extends React.Component {
             isDirtyDOM: false,
             nodeCtrlHidden: true,
             selectedNodeId: 0,
-            listeners: {},
             edges: {},
             openNodeModal: null,
             nodeModalMode: 0, // 0 for viewing node, 1 for creating node, 2 for editing
             nodeTitle: "", // used for editing
-            nodeDescription: ""
+            nodeDescription: "",
+            nodePosX: 0,
+            nodePosY: 0,
+            linkedItemId: 0
         };
 
         this.handleDragStart = this.handleDragStart.bind(this);
@@ -57,6 +57,7 @@ export default class WorkArea extends React.Component {
         this.handleOnNodeCreate = this.handleOnNodeCreate.bind(this);
         this.handleOnNodeUpdate = this.handleOnNodeUpdate.bind(this);
         this.handleOnNodeDelete = this.handleOnNodeDelete.bind(this);
+        this.handleOnNodeUpdateState = this.handleOnNodeUpdateState.bind(this);
 
         this.toggleNodeCtrl = this.toggleNodeCtrl.bind(this);
         this.toggleNodeOptions = this.toggleNodeOptions.bind(this);
@@ -88,18 +89,20 @@ export default class WorkArea extends React.Component {
     }
 
     handleDragStart(id) {
-        // TODO: In chrome, this somehow prevents a child onclick to run
+        // In chrome, this somehow prevents a child onclick to run
+        // Solved by using onPointerUp instead of  onClick
         const array = [].concat(this.state.draggableItems);
         const index = array.indexOfWhen(item => item.id === id);
         const raised = array.splice(index, 1)[0];
         const array2 = array.concat(raised);
+
         
         this.setState({ draggableItems: array2 });
     }
 
     handleDragMove(id, dx, dy) {
         // How will we pass this to the edge itself?
-        let edges = this.state.edges[id];
+        const edges = this.state.edges[id];
         if (edges && edges.length > 0) {
             edges.forEach(edge => {
                 edge.callable(dx, dy);
@@ -107,82 +110,92 @@ export default class WorkArea extends React.Component {
         }
     }
 
-    handleDragEnd(id, dx, dy) {
-        
+    handleDragEnd(item, dx, dy) {
+        // only update if there's been significant change to the item position
+        if (Math.abs(item.initialX - dx) < 1 ||
+            Math.abs(item.initialY - dy) < 1)
+            return;
+
         // Save changes immediately to db
-        DBService.nodes.update(id, {initialX: dx, initialY: dy}).then(updated => {
+        DBService.nodes.update(item.id, {initialX: dx, initialY: dy}).then(updated => {
             
             this.setState({isDirtyDB: true});
             // Show a toast or an out of the way notif for changes saved
         });
     }
 
-    handleEdgeCtrlDragEnd(event, item) {
+    handleEdgeCtrlDragEnd(event, item, dx, dy) {
         // TODO: Check if clientX and clientY from events work
-        let x = Math.floor(event.clientX || event.changedTouches[0].clientX);
-        let y = Math.floor(event.clientY || event.changedTouches[0].clientY);
+        const screenX = Math.floor(event.clientX || event.changedTouches[0].clientX);
+        const screenY = Math.floor(event.clientY || event.changedTouches[0].clientY);
 
-        let elements = document.elementsFromPoint(x, y);
-        let element = elements.find(e => e.getAttribute('data-name'));
-        if (!element)
+        const x = item.initialX + dx;
+        const y = item.initialY + dy;
+
+        const elements = document.elementsFromPoint(screenX, screenY);
+        const element = elements.find(e => e.getAttribute('data-name'));
+        if (!element) {
+            console.log(element);
+            this.handleOpenCreateNode(x + 300, y, item.id);
+            return;
+        }
+
+        const name = element.getAttribute('data-name');
+        if (!name)
             return;
 
-        let name = element.getAttribute('data-name');
-        if (name === undefined || name === null)
-            return null;
+        if (name === `node-${item.id}`)
+            return; // this means the interacted item is this item
 
-        if (name !== `node-${item.id}`) {
-            // register this new id to the connected array of this item
-            let nodes = this.state.draggableItems;
-
-            let otherId = parseInt(name.substring(5));
-            let other = nodes.find(n => n.id === otherId);
-            let connectedFrom = other.connectedFrom;
-
+        
+        // register this new id to the connected array of this item
+        let other = {};
+        DBService.nodes.where('projectId')
+                       .equals(this.state.projectId)
+                       .toArray()
+        .then(items => {
+            const otherId = parseInt(name.substring(5));
+            other = items.find(n => n.id === otherId);
+    
             // get current connected array from db
-            // Note: A get here from the db shouldn't really happen, let the
-            // update lifecycle handle the getting from database, this is supposed
-            // to trust the nodes that the state currently has
-            // TODO: Actually, ignore the above note. If we want this app to be
-            // usable by concurrent users, we'll definitely need to update from the
-            // db with every action that could change the db that we do. But then,
-            // we'll need to first use a different db instead of indexed db
-            let node = item; //nodes.find(n => n.id === item.id); // Why are we searching for the item that's passed as an arg?!
-            let connectedTo = node.connectedTo;
-
-            let index = connectedTo.indexOf(other.id);
-
+            // TODO: If we want this app to be usable by concurrent users, we'll 
+            // definitely need to update from the db with every action that could 
+            // change the db that we do. But then, we'll need to first use a different 
+            // db instead of indexed db
+            const node = item; //nodes.find(n => n.id === item.id); // Why are we searching for the item that's passed as an arg?!
+            const index = node.connectedTo.indexOf(other.id);
+    
             if (index < 0) {
                 // Check if adding this node creates a cycle in the graph
-                if (this.checkGraphCycleExists(other.connectedTo, node.id))
+                if (this.checkGraphCycleExists(items, other.connectedTo, node.id))
                     return;
-
-                connectedTo.push(other.id); // add id if not found
-                connectedFrom.push(node.id);
+    
+                node.connectedTo.push(other.id); // add id if not found
+                other.connectedFrom.push(node.id);
             }
 
-            DBService.nodes.update(node.id, {connectedTo: connectedTo}).then(updated => {
-                return DBService.nodes.update(other.id, {connectedFrom: connectedFrom});
-            }).then(updated => {
-                this.setState({isDirtyDB: true});
-            });
-        }
+            return DBService.nodes.update(node.id, {connectedTo: node.connectedTo});
+        }).then(updated => {
+            return DBService.nodes.update(other.id, {connectedFrom: other.connectedFrom});
+        }).then(updated => {
+            this.setState({isDirtyDB: true});
+        });
     }
 
     // Starting arr is the connectedTo arr of the node
     // the user wants to connect to
     // The id is the id of the node the user is
     // connecting from
-    checkGraphCycleExists(connectedTo, id) {
+    checkGraphCycleExists(items, connectedTo, id) {
         if (connectedTo.some(e => e === id))
             return true;
 
         var result = false;
 
         for (var i = 0; i < connectedTo.length; i++) {
-            let e = connectedTo[i];
+            const e = connectedTo[i];
             // Get the connectedTo array of the node with e as the id
-            let newArr = this.state.draggableItems.find(n => n.id === e).connectedTo;
+            const newArr = items.find(n => n.id === e).connectedTo;
             result = this.checkGraphCycleExists(newArr, id);
             if (result)
                 break;
@@ -192,11 +205,11 @@ export default class WorkArea extends React.Component {
     }
 
     handleOnEdgeCreated(fromId, toId, callable) {
-        let edges = this.state.edges;
+        const edges = this.state.edges;
         if(!edges[fromId])
             edges[fromId] = [];
 
-        let edge = {
+        const edge = {
             to: toId,
             callable: callable
         };
@@ -205,47 +218,68 @@ export default class WorkArea extends React.Component {
     }
 
     handleOnEdgeDelete(itemId, otherId) {
-        let connectedTo = this.state.draggableItems.find(n => n.id === itemId).connectedTo;
-        let connectedFrom = this.state.draggableItems.find(n => n.id === otherId).connectedFrom;
-        let indexTo = connectedTo.indexOf(otherId);
-        let indexFrom = connectedFrom.indexOf(itemId);
-        if (indexTo < 0 || indexFrom < 0)
-            return;
+        let connectedFrom = [];
+        DBService.nodes.where('projectId')
+                       .equals(this.state.projectId)
+                       .toArray()
+        .then(items => {
+            const connectedTo = items.find(n => n.id === itemId).connectedTo;
+            connectedFrom = items.find(n => n.id === otherId).connectedFrom;
+            const indexTo = connectedTo.indexOf(otherId);
+            const indexFrom = connectedFrom.indexOf(itemId);
+            if (indexTo < 0 || indexFrom < 0)
+                return;
+    
+            connectedTo.splice(indexTo, 1); // remove if in array already
+            connectedFrom.splice(indexFrom, 1);
+    
+            // Also remove the callables from the edges array
+            const edges = this.state.edges;
+            edges[itemId].removeIf(edge => edge.to === otherId);
+            edges[otherId].removeIf(edge => edge.to === itemId);
+    
+            this.setState({edges: edges});
 
-        connectedTo.splice(indexTo, 1); // remove if in array already
-        connectedFrom.splice(indexFrom, 1);
-
-        // Also remove the callables from the edges array
-        let edges = this.state.edges;
-        edges[itemId].removeIf(edge => edge.to === otherId);
-        edges[otherId].removeIf(edge => edge.to === itemId);
-
-        this.setState({edges: edges});
-
-        DBService.nodes.update(itemId, {connectedTo: connectedTo}).then(updated => {
+            return DBService.nodes.update(itemId, {connectedTo: connectedTo});
+        }).then(updated => {
             return DBService.nodes.update(otherId, {connectedFrom: connectedFrom});
         }).then(updated => {
             this.setState({isDirtyDB: true});
         })
     }
 
-    handleOnNodeCreate(dx, dy, title, description) {
-        if (!title || !description)
+    handleOnNodeCreate(title, description) {
+        if (!title)
             return false;
 
-        const projectId = this.state.projectId;
-
-        DBService.addNode(projectId, title, description, dx, dy, [], []).then(() => {
-            this.setState({isDirtyDB: true});
-        }).catch(error => {
-            console.error(error.stack || error);
-        });
+        const {projectId, nodePosX, nodePosY, linkedItemId} = this.state;
+        let nodeId = 0;
+        if (linkedItemId) {
+            DBService.addNode(projectId, title, description, 0, nodePosX, nodePosY, [linkedItemId], []).then(id => {
+                nodeId = id;
+                return DBService.nodes.get(linkedItemId);
+            }).then(item => {
+                const connectedTo = item.connectedTo;
+                connectedTo.push(nodeId);
+                return DBService.nodes.update(item.id, {connectedTo: connectedTo});
+            }).then(() => {
+                this.setState({isDirtyDB: true});
+            }).catch(error => {
+                console.error(error.stack || error);
+            });
+        } else {
+            DBService.addNode(projectId, title, description, nodePosX, nodePosY, [], []).then(() => {
+                this.setState({isDirtyDB: true});
+            }).catch(error => {
+                console.error(error.stack || error);
+            });
+        }
 
         return true;
     }
 
     handleOnNodeUpdate(itemId, title, description) {
-        if (!title || !description)
+        if (!title)
             return false;
 
         DBService.nodes.update(itemId, {name: title, description: description}).then(() => {
@@ -255,20 +289,30 @@ export default class WorkArea extends React.Component {
         return true;
     }
 
+    handleOnNodeUpdateState(itemId, state) {
+        DBService.nodes.update(itemId, {state: state}).then(() => {
+            this.setState({isDirtyDB: true});
+        });
+    }
+
     handleOnNodeDelete(id) {
-        // TODO: Remove all the nodes connected to this
-        let node = this.state.draggableItems.find(item => item.id === id);
-        // TODO: This is very inefficient, better to track all
-        // the changes first then save changes afterwards
-        node.connectedTo.forEach(e => {
-            this.handleOnEdgeDelete(node.id, e);
-        });
-
-        node.connectedFrom.forEach(e => {
-            this.handleOnEdgeDelete(e, node.id);
-        });
-
-        DBService.nodes.delete(id).then(() => {
+        DBService.nodes.where('projectId')
+                       .equals(this.state.projectId)
+                       .toArray()
+        .then(items => {
+            const node = items.find(item => item.id === id);
+            // TODO: This is very inefficient, better to track all
+            // the changes first then save changes afterwards
+            node.connectedTo.forEach(e => {
+                this.handleOnEdgeDelete(node.id, e);
+            });
+    
+            node.connectedFrom.forEach(e => {
+                this.handleOnEdgeDelete(e, node.id);
+            });
+    
+            return DBService.nodes.delete(id);
+        }).then(() => {
             this.setState({isDirtyDB: true});
         });
     }
@@ -278,9 +322,9 @@ export default class WorkArea extends React.Component {
         this.setState({nodeModalMode: 0, nodeTitle: title, nodeDescription: description});
     }
 
-    handleOpenCreateNode() {
+    handleOpenCreateNode(dx = 0, dy = 0, linkedItemId = 0) {
         this.state.openNodeModal();
-        this.setState({nodeModalMode: 1});
+        this.setState({nodeModalMode: 1, nodePosX: dx, nodePosY: dy, linkedItemId: linkedItemId});
     }
 
     handleOpenEditNode(title, description) {
@@ -295,13 +339,15 @@ export default class WorkArea extends React.Component {
     toggleNodeOptions(id) {
         if (this.state.selectedNodeId === id)
             this.setState({selectedNodeId: 0});
-        else
+        else {
             this.setState({selectedNodeId: id});
+            this.handleDragStart(id);
+        }
     }
 
     render() {
-        let width = this.props.width;
-        let height = this.props.height;
+        const width = this.props.width;
+        const height = this.props.height;
         return(
             <>
                 <Zoom width={width} 
@@ -388,8 +434,10 @@ export default class WorkArea extends React.Component {
                                                 handleDragMove={this.handleDragMove}
                                                 handleDragEnd={this.handleDragEnd}
                                                 handleEdgeCtrlDragEnd={this.handleEdgeCtrlDragEnd}
+                                                handleOnNodeUpdateState={this.handleOnNodeUpdateState}
                                                 handleOnNodeDelete={this.handleOnNodeDelete}
                                                 handleOpenViewNode={this.handleOpenViewNode}
+                                                handleOpenCreateNode={this.handleOpenCreateNode}
                                                 handleOpenEditNode={this.handleOpenEditNode}
                                                 toggleNodeOptions={this.toggleNodeOptions}/>
                                         </g>
@@ -415,7 +463,7 @@ export default class WorkArea extends React.Component {
                                 </button>
                                 <div className={`${this.state.nodeCtrlHidden ? 'hidden' : ''} -ml-8 pl-10 pr-2 py-2 sm:-ml-8 sm:pl-12 sm:pr-4 sm:py-2 rounded-r-lg shadow-md bg-gray-100`}>
                                     <button className="px-3 py-1 sm:px-5 sm:py-3 rounded-lg shadow font-semibold bg-gray-400"
-                                            onClick={this.handleOpenCreateNode}>
+                                            onClick={() => this.handleOpenCreateNode()}>
                                         Node
                                     </button>
                                 </div>
@@ -556,8 +604,8 @@ class Edge extends React.Component {
     }
 
     render() {
-        let midPointX = ((this.props.endDx - this.props.startDx - 300) / 2) + (this.props.startDx + 300);
-        let midPointY = ((this.props.endDy + 50 - this.props.startDy - 50) / 2) + (this.props.startDy + 50);
+        const midPointX = ((this.props.endDx - this.props.startDx - 300) / 2) + (this.props.startDx + 300);
+        const midPointY = ((this.props.endDy + 50 - this.props.startDy - 50) / 2) + (this.props.startDy + 50);
 
         const {isHovered} = this.state;
         const {children} = this.props;
@@ -595,6 +643,7 @@ class NodeForm extends React.Component {
 
         this.handleOnTitleChange = this.handleOnTitleChange.bind(this);
         this.handleOnDescriptionChange = this.handleOnDescriptionChange.bind(this);
+        this.resetInput = this.resetInput.bind(this);
     }
 
     componentDidUpdate() {
@@ -622,6 +671,10 @@ class NodeForm extends React.Component {
         this.setState({description: data});
     }
 
+    resetInput() {
+        this.setState({title: "", description: ""});
+    }
+
     render() {
         return(
             <form className="text-gray-800" action="">
@@ -647,11 +700,15 @@ class NodeForm extends React.Component {
                         value={`${this.props.handleOnNodeCreate ? 'Create' : 'Edit'} Node`}
                         onClick={() => {
                             if (this.props.handleOnNodeCreate) {
-                                if (this.props.handleOnNodeCreate(0, 0, this.state.title, this.state.description))
+                                if (this.props.handleOnNodeCreate(this.state.title, this.state.description)) {
+                                    this.resetInput();
                                     this.props.handleCloseModal();
+                                }
                             } else if (this.props.handleOnNodeUpdate) {
-                                if (this.props.handleOnNodeUpdate(this.props.itemId, this.state.title, this.state.description))
+                                if (this.props.handleOnNodeUpdate(this.props.itemId, this.state.title, this.state.description)) {
+                                    this.resetInput();
                                     this.props.handleCloseModal();
+                                }
                             }
                         }} />
                     <input className="px-4 py-2 sm:mr-2 rounded-md bg-gray-300 text-indigo-500 hover:bg-gray-400 cursor-pointer" 

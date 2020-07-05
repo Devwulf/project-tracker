@@ -38,6 +38,7 @@ export default class SidebarNav extends React.Component {
     }
 
     handleOnProjectCreate(title, description) {
+        // TODO: Show feedback for invalid input
         if (!title || !description)
             return false;
 

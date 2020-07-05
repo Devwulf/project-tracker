@@ -268,7 +268,7 @@ export default class WorkArea extends React.Component {
                 console.error(error.stack || error);
             });
         } else {
-            DBService.addNode(projectId, title, description, nodePosX, nodePosY, [], []).then(() => {
+            DBService.addNode(projectId, title, description, 0, nodePosX, nodePosY, [], []).then(() => {
                 this.setState({isDirtyDB: true});
             }).catch(error => {
                 console.error(error.stack || error);

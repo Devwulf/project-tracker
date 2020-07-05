@@ -344,3 +344,11 @@
     list-style-position: inside; 
     margin-left: 15px; 
  }
+
+ .ck-content a {
+     color: #4299e1;
+ }
+
+ .ck-content a:hover {
+     color: #2b6cb0;
+ }

@@ -255,7 +255,7 @@ export default class WorkArea extends React.Component {
         const {projectId, nodePosX, nodePosY, linkedItemId} = this.state;
         let nodeId = 0;
         if (linkedItemId) {
-            DBService.addNode(projectId, title, description, 0, nodePosX, nodePosY, [linkedItemId], []).then(id => {
+            DBService.addNode(projectId, title, description, 0, nodePosX, nodePosY, [linkedItemId], [], false, []).then(id => {
                 nodeId = id;
                 return DBService.nodes.get(linkedItemId);
             }).then(item => {
@@ -268,7 +268,7 @@ export default class WorkArea extends React.Component {
                 console.error(error.stack || error);
             });
         } else {
-            DBService.addNode(projectId, title, description, 0, nodePosX, nodePosY, [], []).then(() => {
+            DBService.addNode(projectId, title, description, 0, nodePosX, nodePosY, [], [], false, []).then(() => {
                 this.setState({isDirtyDB: true});
             }).catch(error => {
                 console.error(error.stack || error);
@@ -758,6 +758,10 @@ class NodeView extends React.Component {
                 <p className="mb-2 text-xl font-bold">{this.props.title}</p>
                 <hr className="mb-4" />
                 <div className="ck-content" dangerouslySetInnerHTML={{__html: DOMPurify.sanitize(this.props.description)}}></div>
+                <button className="px-4 py-2 sm:mr-2 rounded-md bg-gray-300 text-indigo-500 hover:bg-gray-400 cursor-pointer" 
+                        onClick={this.props.handleCloseModal}>
+                    Close
+                </button>
             </div>
         );
     }
@@ -767,8 +771,47 @@ class NodeChecklist extends React.Component {
     constructor(props) {
         super(props);
 
+        const {item, isEditable} = this.props;
         this.state = {
-            list: []
+            list: item.checklist || [],
+            isEditable: isEditable || false
         }
+
+        this.handleOnItemStateChange = this.handleOnItemStateChange.bind(this);
+        this.handleOnItemNameChange = this.handleOnItemNameChange.bind(this);
+    }
+
+    // For when a checklist item is marked as checked or unchecked
+    // TODO: Need some way to merge changes if this checklist was changed before saving
+    handleOnItemStateChange(event, i) {
+        const list = this.state.list;
+        list[i].isChecked = event.target.checked;
+        this.setState({list: list});
+    }
+
+    handleOnItemNameChange(event, i) {
+        const list = this.state.list;
+        list[i].name = event.target.value;
+        this.setState({list: list});
+    }
+
+    render() {
+        return(
+            <form className="" action="" >
+                {this.state.list.map((item, i) => (
+                    <label className="" key={`check-${i}`} htmlFor="" >
+                        <input className="" type="checkbox" checked={item.isChecked} onChange={event => this.handleOnItemStateChange(event, i)} />
+                        {(this.state.isEditable &&
+                            <input className="" type="text" value={item.name} onChange={event => this.handleOnItemNameChange(event, i)} />
+                        ) ||
+                        (!this.state.isEditable &&
+                            <span className="">
+                                {item.name}
+                            </span>
+                        )}
+                    </label>
+                ))}
+            </form>
+        );
     }
 }

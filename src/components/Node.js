@@ -62,7 +62,7 @@ export default class Node extends React.Component {
                                     Basically, no other events could work properly with the events
                                     above. I've tried onClick, onMouseDown and onTouchEnd, trying
                                     different kinds of functions to run. But only onPointerUp worked! */}
-                                <g onPointerUp={() => this.props.toggleNodeOptions(this.props.item.id)}>
+                                <g onPointerUp={() => this.props.toggleNodeOptions(this.props.item.id, this.props.item)}>
                                     <rect data-name={`node-${this.props.item.id}`}
                                             className={`node-root fill-current text-${color}-600`} 
                                             width="300" 
@@ -76,7 +76,7 @@ export default class Node extends React.Component {
                                             <div className="p-4 flex items-center w-full h-full pointer-events-none">
                                                 <div className={`flex flex-col w-full text-${color}-900`}>
                                                     <span className="text-2xl font-bold truncate select-none">
-                                                        {this.props.item.name}
+                                                        {this.props.item.title}
                                                     </span>
                                                     <span className="text-xl font-medium truncate select-none">
                                                         {`${this.props.item.connectedTo.length} subgoals`} {/*&#x2022; {`${10} in list`}*/}
@@ -94,7 +94,7 @@ export default class Node extends React.Component {
 
                             {(this.props.selectedNodeId === this.props.item.id &&
                                 <>
-                                    <g onClick={() => this.props.handleOpenViewNode(this.props.item.name, this.props.item.description)}>
+                                    <g onClick={() => this.props.handleOpenViewNode(this.props.item)}>
                                         <rect className="fill-current text-gray-500"
                                             x="23"
                                             y="-90"
@@ -112,7 +112,7 @@ export default class Node extends React.Component {
                                             </div>
                                         </foreignObject>
                                     </g>
-                                    <g onClick={() => this.props.handleOpenEditNode(this.props.item.name, this.props.item.description)}>
+                                    <g onClick={() => this.props.handleOpenEditNode(this.props.item)}>
                                         <rect className="fill-current text-gray-500"
                                             x="113"
                                             y="-90"

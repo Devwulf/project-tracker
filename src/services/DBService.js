@@ -41,7 +41,7 @@ class DBService {
                 this.addNode(1, "Tooltips", "Details about the functionality when hovering over, say, buttons", 0, 1500, 1400, [4], [], false, []);
                 this.addNode(1, "Basic hotkeys", "Basic hotkeys like deleting a node, copy-pasting, duplicating, undo/redo, etc.", 0, 1500, 1600, [5], [], false, []);
                 this.addNode(1, "Undo/Redo", "Keep track of an undo/redo history and be able to go back and forth", 0, 1500, 1800, [5], [], false, []);
-                this.addNode(1, "Make node description optional", "", 3, 1500, 2000, [5], []);
+                this.addNode(1, "Make node description optional", "", 3, 1500, 2000, [5], [], false, []);
             }
         });
     }
@@ -63,10 +63,10 @@ class DBService {
         return this.db.nodes;
     }
 
-    addNode(projectId, name, description, state, initialX, initialY, connectedFrom, connectedTo, hasChecklist, checklist) {
+    addNode(projectId, title, description, state, initialX, initialY, connectedFrom, connectedTo, hasChecklist, checklist) {
         const node = {
             projectId,
-            name,
+            title,
             description,
             state,
             initialX,

@@ -21,22 +21,23 @@ const initialTransformZoom = {
     skewY: 0,
 };
 
+const emptyItem = {projectId: 0, title: "", description: "", state: 0, initialX: 0, initialY: 0, connectedFrom: [], connectedTo: [], hasChecklist: false, checklist: []};
+
 export default class WorkArea extends React.Component {
     constructor(props) {
         super(props);
 
         this.state = {
             projectId: 0,
-            draggableItems: [],
+            nodes: [],
             isDirtyDB: false,
             isDirtyDOM: false,
             nodeCtrlHidden: true,
             selectedNodeId: 0,
+            selectedNode: {projectId: 0, title: "", description: "", state: 0, initialX: 0, initialY: 0, connectedFrom: [], connectedTo: [], hasChecklist: false, checklist: []},
             edges: {},
             openNodeModal: null,
             nodeModalMode: 0, // 0 for viewing node, 1 for creating node, 2 for editing
-            nodeTitle: "", // used for editing
-            nodeDescription: "",
             nodePosX: 0,
             nodePosY: 0,
             linkedItemId: 0
@@ -70,7 +71,7 @@ export default class WorkArea extends React.Component {
             DBService.nodes.where('projectId').equals(id).toArray().then(nodes => {
                 this.setState({
                     projectId: id,
-                    draggableItems: nodes,
+                    nodes: nodes,
                     isDirtyDB: false
                 });
             }).catch(error => {
@@ -80,7 +81,7 @@ export default class WorkArea extends React.Component {
 
         if (this.state.isDirtyDOM) {
             // Initialize the edge positions here
-            this.state.draggableItems.forEach(item => {
+            this.state.nodes.forEach(item => {
                 this.handleDragMove(item.id, item.initialX, item.initialY);
             });
 
@@ -91,13 +92,13 @@ export default class WorkArea extends React.Component {
     handleDragStart(id) {
         // In chrome, this somehow prevents a child onclick to run
         // Solved by using onPointerUp instead of  onClick
-        const array = [].concat(this.state.draggableItems);
+        const array = [].concat(this.state.nodes);
         const index = array.indexOfWhen(item => item.id === id);
         const raised = array.splice(index, 1)[0];
         const array2 = array.concat(raised);
 
         
-        this.setState({ draggableItems: array2 });
+        this.setState({ nodes: array2 });
     }
 
     handleDragMove(id, dx, dy) {
@@ -317,9 +318,9 @@ export default class WorkArea extends React.Component {
         });
     }
 
-    handleOpenViewNode(title, description) {
+    handleOpenViewNode() {
         this.state.openNodeModal();
-        this.setState({nodeModalMode: 0, nodeTitle: title, nodeDescription: description});
+        this.setState({nodeModalMode: 0});
     }
 
     handleOpenCreateNode(dx = 0, dy = 0, linkedItemId = 0) {
@@ -329,18 +330,19 @@ export default class WorkArea extends React.Component {
 
     handleOpenEditNode(title, description) {
         this.state.openNodeModal();
-        this.setState({nodeModalMode: 2, nodeTitle: title, nodeDescription: description});
+        this.setState({nodeModalMode: 2});
     }
 
     toggleNodeCtrl() {
         this.setState(state => ({nodeCtrlHidden: !state.nodeCtrlHidden}));
     }
 
-    toggleNodeOptions(id) {
+    toggleNodeOptions(id, item) {
+        console.log(item)
         if (this.state.selectedNodeId === id)
-            this.setState({selectedNodeId: 0});
+            this.setState({selectedNodeId: 0, selectedNode: {projectId: 0, title: "", description: "", state: 0, initialX: 0, initialY: 0, connectedFrom: [], connectedTo: [], hasChecklist: false, checklist: []}});
         else {
-            this.setState({selectedNodeId: id});
+            this.setState({selectedNodeId: id, selectedNode: item});
             this.handleDragStart(id);
         }
     }
@@ -388,7 +390,7 @@ export default class WorkArea extends React.Component {
                                 
                                 <g name="node-root"
                                    transform={zoom.toString()}>
-                                    {this.state.draggableItems.map((item, i) => (
+                                    {this.state.nodes.map((item, i) => (
                                         <g key={`${item.id}`} >
                                             {item.connectedTo.map(id => (
                                                 <EdgeStart key={`edge-${item.id}-${id}`} 
@@ -479,9 +481,9 @@ export default class WorkArea extends React.Component {
                                 this.setState({openNodeModal: callable});
                         }}>
                     {({closeModal}) => (
-                        (this.state.nodeModalMode === 0 &&
-                            <NodeView title={this.state.nodeTitle}
-                                        description={this.state.nodeDescription}
+                        (this.state.nodeModalMode === 0 && 
+                            <NodeView title={this.state.selectedNode.title}
+                                        description={this.state.selectedNode.description}
                                         handleCloseModal={closeModal} />
                         ) ||
                         (this.state.nodeModalMode === 1 &&
@@ -492,8 +494,8 @@ export default class WorkArea extends React.Component {
                         ) ||
                         (this.state.nodeModalMode === 2 &&
                             <NodeForm itemId={this.state.selectedNodeId}
-                                        title={this.state.nodeTitle}
-                                        description={this.state.nodeDescription}
+                                        title={this.state.selectedNode.title}
+                                        description={this.state.selectedNode.description}
                                         handleOnNodeUpdate={this.handleOnNodeUpdate}
                                         handleCloseModal={closeModal} />
                         )
@@ -758,7 +760,7 @@ class NodeView extends React.Component {
                 <p className="mb-2 text-xl font-bold">{this.props.title}</p>
                 <hr className="mb-4" />
                 <div className="ck-content" dangerouslySetInnerHTML={{__html: DOMPurify.sanitize(this.props.description)}}></div>
-                <button className="px-4 py-2 sm:mr-2 rounded-md bg-gray-300 text-indigo-500 hover:bg-gray-400 cursor-pointer" 
+                <button className="px-4 py-2 mt-4 sm:mr-2 rounded-md bg-gray-300 text-indigo-500 hover:bg-gray-400 cursor-pointer" 
                         onClick={this.props.handleCloseModal}>
                     Close
                 </button>
@@ -802,7 +804,7 @@ class NodeChecklist extends React.Component {
                     <label className="" key={`check-${i}`} htmlFor="" >
                         <input className="" type="checkbox" checked={item.isChecked} onChange={event => this.handleOnItemStateChange(event, i)} />
                         {(this.state.isEditable &&
-                            <input className="" type="text" value={item.name} onChange={event => this.handleOnItemNameChange(event, i)} />
+                            <input className="" type="text" value={item.title} onChange={event => this.handleOnItemNameChange(event, i)} />
                         ) ||
                         (!this.state.isEditable &&
                             <span className="">

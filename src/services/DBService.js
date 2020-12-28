@@ -20,28 +20,26 @@ class DBService {
     seedData() {
         this.db.projects.toArray().then(projects => {
             if (projects.length <= 0) {
-                this.addProject("Project Tracker", "A project tracker and planner for this web app");
+                this.addProject("Sample Project", "An example of a tracked project");
             }
         });
 
         this.db.nodes.toArray().then(nodes => {
             if (nodes.length <= 0) {
-                this.addNode(1, "v1.0 - Initial Release", "The feature complete version of this web app", 0, 0, 1250, [], [2, 3], false, []);
-                this.addNode(1, "Features", "", 0, 500, 1000, [1], [4, 5], false, []);
-                this.addNode(1, "Bugs", "", 0, 500, 2500, [1], [], false, []);
-                this.addNode(1, "UI", "", 0, 1000, 800, [2], [6, 7, 8, 9, 10, 11, 12, 13], false, []);
-                this.addNode(1, "Functionality", "", 0, 1000, 1800, [2], [14, 15, 16], false, []);
-                this.addNode(1, "Checklist in node", "Another option of tracking stuff besides creating nodes", 2, 1500, 0, [4], [], false, []);
-                this.addNode(1, "Comment nodes", "Special nodes that could be used to comment certain parts of the graph", 0, 1500, 200, [4], [], false, []);
-                this.addNode(1, "Grouping nodes together", "Wrapping nodes in a nameable group node that could move all the grouped nodes together", 0, 1500, 400, [4], [], false, []);
-                this.addNode(1, "Setting node states", "Either not started, cancelled, active, or finished", 3, 1500, 600, [4], [], false, []);
-                this.addNode(1, "Connect node when dragging from another node", "Automatically connects new nodes when created by dragging using the plus knob", 3, 1500, 800, [4], [], false, []);
-                this.addNode(1, "Reference nodes", "Be able to reference a node from somewhere else in the graph or a different project altogether, always syncing the reference with the real node", 0, 1500, 1000, [4], [], false, []);
-                this.addNode(1, "Adding node from toolbar", "Be able to create a node directly from the toolbar by dragging it into the work area", 0, 1500, 1200, [4], [], false, []);
-                this.addNode(1, "Tooltips", "Details about the functionality when hovering over, say, buttons", 0, 1500, 1400, [4], [], false, []);
-                this.addNode(1, "Basic hotkeys", "Basic hotkeys like deleting a node, copy-pasting, duplicating, undo/redo, etc.", 0, 1500, 1600, [5], [], false, []);
-                this.addNode(1, "Undo/Redo", "Keep track of an undo/redo history and be able to go back and forth", 0, 1500, 1800, [5], [], false, []);
-                this.addNode(1, "Make node description optional", "", 3, 1500, 2000, [5], [], false, []);
+                this.addNode(1, "v0.5 - The Big Update", "The big update implementing lots of features and fixes lots of bugs!", 0, 0, 900, [], [2, 10, 12], false, []);
+                    this.addNode(1, "Features", "", 0, 500, 450, [1], [3, 7], false, []);
+                        this.addNode(1, "UI", "", 0, 1000, 200, [2], [4, 5, 6], false, []);
+                            this.addNode(1, "A pending task", "", 2, 1500, 0, [3], [], false, []);
+                            this.addNode(1, "Another pending task", "", 2, 1500, 200, [3], [], false, []);
+                            this.addNode(1, "A finished task", "", 3, 1500, 400, [3], [], false, []);
+                        this.addNode(1, "Functionality", "", 0, 1000, 700, [2], [8, 9], false, []);
+                            this.addNode(1, "A cancelled task", "", 1, 1500, 600, [7], [], false, []);
+                            this.addNode(1, "A finished task", "", 3, 1500, 800, [7], [], false, []);
+                    this.addNode(1, "Fixes", "", 0, 500, 1000, [1], [11], false, []);
+                        this.addNode(1, "A major bug", "This bug is finally squashed! Good job, team!", 3, 1000, 1000, [10], [], false, []);
+                    this.addNode(1, "Known Bugs", "", 0, 500, 1300, [1], [13, 14], false, []);
+                        this.addNode(1, "A major bug", "", 2, 1000, 1200, [12], [], false, []);
+                        this.addNode(1, "A minor bug", "Allan, please add details.", 0, 1000, 1400, [12], [], false, []);
             }
         });
     }

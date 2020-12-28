@@ -375,13 +375,13 @@ export default class WorkArea extends React.Component {
                                       onTouchStart={zoom.dragStart}
                                       onTouchMove={zoom.dragMove}
                                       onTouchEnd={() => {
-                                          this.toggleNodeOptions(0);
+                                          this.toggleNodeOptions(0, {projectId: 0, title: "", description: "", state: 0, initialX: 0, initialY: 0, connectedFrom: [], connectedTo: [], hasChecklist: false, checklist: []});
                                           zoom.dragEnd();
                                       }}
                                       onMouseDown={zoom.dragStart}
                                       onMouseMove={zoom.dragMove}
                                       onMouseUp={() => {
-                                          this.toggleNodeOptions(0);
+                                          this.toggleNodeOptions(0, {projectId: 0, title: "", description: "", state: 0, initialX: 0, initialY: 0, connectedFrom: [], connectedTo: [], hasChecklist: false, checklist: []});
                                           zoom.dragEnd();
                                       }}
                                       onMouseLeave={() => {
@@ -430,7 +430,7 @@ export default class WorkArea extends React.Component {
                                             <Node item={item}
                                                 width={width}
                                                 height={height}
-                                                zoom={zoom}
+                                                zoomMatrix={zoom.transformMatrix}
                                                 selectedNodeId={this.state.selectedNodeId}
                                                 handleDragStart={this.handleDragStart}
                                                 handleDragMove={this.handleDragMove}

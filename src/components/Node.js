@@ -3,15 +3,6 @@ import ScaledDrag from './ScaledDrag.tsx';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 
 export default class Node extends React.Component {
-    constructor(props) {
-        super(props);
-
-        this.state = {
-            x: 0,
-            y: 0
-        };
-    }
-
     render() {
         let color = 'gray';
         const state = this.props.item.state;
@@ -22,53 +13,55 @@ export default class Node extends React.Component {
         else if (state === 3)
             color = 'green';
 
+        const {width, height, item, zoomMatrix, selectedNodeId, handleDragMove, handleDragStart, handleDragEnd, toggleNodeOptions, handleOpenViewNode, handleOpenEditNode, handleOnNodeDelete, handleOnNodeUpdateState, handleEdgeCtrlDragEnd} = this.props;
+        
         return(
-            <ScaledDrag width={this.props.width} 
-                    height={this.props.height}
-                    startX={this.props.item.initialX}
-                    startY={this.props.item.initialY}
-                    scaleX={this.props.zoom.transformMatrix.scaleX}
-                    scaleY={this.props.zoom.transformMatrix.scaleY}>
+            <ScaledDrag width={width} 
+                    height={height}
+                    startX={item.initialX}
+                    startY={item.initialY}
+                    scaleX={zoomMatrix.scaleX}
+                    scaleY={zoomMatrix.scaleY}>
                 {({ dragStart, dragEnd, dragMove, isDragging, dx, dy }) =>
                     (false && isDragging) || (
-                        <g key={`node-${this.props.item.id}`}
+                        <g key={`node-${item.id}`}
                             transform={`translate(${dx}, ${dy})`}
                             style={{cursor: isDragging ? 'move' : 'pointer' }} >
                             <g onMouseMove={event => {
-                                    this.props.handleDragMove(this.props.item.id, dx, dy);
+                                    handleDragMove(item.id, dx, dy);
                                     dragMove(event);
                                 }}
                                 onMouseDown={event => {
-                                    this.props.handleDragStart(this.props.item.id);
+                                    handleDragStart(item.id);
                                     dragStart(event);
                                 }}
                                 onMouseUp={event => {
-                                    this.props.handleDragEnd(this.props.item, dx, dy);
+                                    handleDragEnd(item, dx, dy);
                                     dragEnd(event);
                                 }}
                                 onTouchMove={event => {
-                                    this.props.handleDragMove(this.props.item.id, dx, dy);
+                                    handleDragMove(item.id, dx, dy);
                                     dragMove(event);
                                 }}
                                 onTouchStart={event => {
-                                    this.props.handleDragStart(this.props.item.id);
+                                    handleDragStart(item.id);
                                     dragStart(event);
                                 }}
                                 onTouchEnd={event => {
-                                    this.props.handleDragEnd(this.props.item, dx, dy);
+                                    handleDragEnd(item, dx, dy);
                                     dragEnd(event);
                                 }}>
                                 {/* NOTE: Oh wow, this has been one of my most annoying problems.
                                     Basically, no other events could work properly with the events
                                     above. I've tried onClick, onMouseDown and onTouchEnd, trying
                                     different kinds of functions to run. But only onPointerUp worked! */}
-                                <g onPointerUp={() => this.props.toggleNodeOptions(this.props.item.id, this.props.item)}>
-                                    <rect data-name={`node-${this.props.item.id}`}
+                                <g onPointerUp={() => toggleNodeOptions(item.id, item)}>
+                                    <rect data-name={`node-${item.id}`}
                                             className={`node-root fill-current text-${color}-600`} 
                                             width="300" 
                                             height="100" 
                                             rx="7"
-                                            style={{stroke: this.props.selectedNodeId === this.props.item.id ? "#4a5568" : "none", strokeWidth: 7}}
+                                            style={{stroke: selectedNodeId === item.id ? "#4a5568" : "none", strokeWidth: 7}}
                                             filter="url(#nodeShadow)"
                                             />
                                     <foreignObject width="300" 
@@ -76,14 +69,18 @@ export default class Node extends React.Component {
                                             <div className="p-4 flex items-center w-full h-full pointer-events-none">
                                                 <div className={`flex flex-col w-full text-${color}-900`}>
                                                     <span className="text-2xl font-bold truncate select-none">
-                                                        {this.props.item.title}
+                                                        {item.title}
                                                     </span>
                                                     <span className="text-xl font-medium truncate select-none">
-                                                        {`${this.props.item.connectedTo.length} subgoals`} {/*&#x2022; {`${10} in list`}*/}
+                                                        {`${item.connectedTo.length} subgoals`}
                                                     </span>
                                                 </div>
                                             </div>
                                     </foreignObject>
+                                    {/*
+                                    <text className="fill-current text-gray-900 text-2xl font-bold" x={15} y={40}>{item.title}</text>
+                                    <text className="fill-current text-gray-900 text-xl" x={15} y={70}>{`${item.connectedTo.length} subgoals`}</text>
+                                    */}
                                 </g>
 
                                 {/*
@@ -92,9 +89,9 @@ export default class Node extends React.Component {
                                 */}
                             </g>
 
-                            {(this.props.selectedNodeId === this.props.item.id &&
+                            {(selectedNodeId === item.id &&
                                 <>
-                                    <g onClick={() => this.props.handleOpenViewNode(this.props.item)}>
+                                    <g onClick={() => handleOpenViewNode(item)}>
                                         <rect className="fill-current text-gray-500"
                                             x="23"
                                             y="-90"
@@ -112,7 +109,7 @@ export default class Node extends React.Component {
                                             </div>
                                         </foreignObject>
                                     </g>
-                                    <g onClick={() => this.props.handleOpenEditNode(this.props.item)}>
+                                    <g onClick={() => handleOpenEditNode(item)}>
                                         <rect className="fill-current text-gray-500"
                                             x="113"
                                             y="-90"
@@ -130,7 +127,7 @@ export default class Node extends React.Component {
                                             </div>
                                         </foreignObject>
                                     </g>
-                                    <g onClick={() => this.props.handleOnNodeDelete(this.props.item.id)}>
+                                    <g onClick={() => handleOnNodeDelete(item.id)}>
                                         <rect className="fill-current text-gray-500"
                                             x="203"
                                             y="-90"
@@ -150,7 +147,7 @@ export default class Node extends React.Component {
                                     </g>
 
 
-                                    <g onClick={() => this.props.handleOnNodeUpdateState(this.props.item.id, this.props.item.state === 3 ? 0 : 3)}>
+                                    <g onClick={() => handleOnNodeUpdateState(item.id, item.state === 3 ? 0 : 3)}>
                                         <rect className="fill-current text-green-500"
                                             x="23"
                                             y="115"
@@ -168,7 +165,7 @@ export default class Node extends React.Component {
                                             </div>
                                         </foreignObject>
                                     </g>
-                                    <g onClick={() => this.props.handleOnNodeUpdateState(this.props.item.id, this.props.item.state === 2 ? 0 : 2)}>
+                                    <g onClick={() => handleOnNodeUpdateState(item.id, item.state === 2 ? 0 : 2)}>
                                         <rect className="fill-current text text-orange-500"
                                             x="113"
                                             y="115"
@@ -186,7 +183,7 @@ export default class Node extends React.Component {
                                             </div>
                                         </foreignObject>
                                     </g>
-                                    <g onClick={() => this.props.handleOnNodeUpdateState(this.props.item.id, this.props.item.state === 1 ? 0 : 1)}>
+                                    <g onClick={() => handleOnNodeUpdateState(item.id, item.state === 1 ? 0 : 1)}>
                                         <rect className="fill-current text-red-500"
                                             x="203"
                                             y="115"
@@ -206,12 +203,12 @@ export default class Node extends React.Component {
                                     </g>
                                 </>
                             )}
-                            <ScaledDrag key={`edge-${this.props.item.id}`}
-                                        width={this.props.width}
-                                        height={this.props.height}
-                                        scaleX={this.props.zoom.transformMatrix.scaleX}
-                                        scaleY={this.props.zoom.transformMatrix.scaleY}
-                                        onDragStart={() => this.props.handleDragStart(this.props.item.id)}
+                            <ScaledDrag key={`edge-${item.id}`}
+                                        width={width}
+                                        height={height}
+                                        scaleX={zoomMatrix.scaleX}
+                                        scaleY={zoomMatrix.scaleY}
+                                        onDragStart={() => handleDragStart(item.id)}
                                         resetOnStart={true}
                                         resetOnEnd={true}>
                                 {({ dragStart, dragEnd, dragMove, isDragging, dx, dy }) => 
@@ -221,13 +218,13 @@ export default class Node extends React.Component {
                                             onMouseMove={dragMove}
                                             onMouseDown={dragStart}
                                             onMouseUp={event => {
-                                                this.props.handleEdgeCtrlDragEnd(event, this.props.item, dx, dy);
+                                                handleEdgeCtrlDragEnd(event, item, dx, dy);
                                                 dragEnd(event);
                                             }}
                                             onTouchMove={dragMove}
                                             onTouchStart={dragStart}
                                             onTouchEnd={event => {
-                                                this.props.handleEdgeCtrlDragEnd(this.props.item, dx, dy);
+                                                handleEdgeCtrlDragEnd(item, dx, dy);
                                                 dragEnd(event);
                                             }}>
                                             <circle cx="300"
